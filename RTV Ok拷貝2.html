@@ -1,0 +1,2429 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Materials Rejudge Tracking System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* --- 企業級色彩與字體 --- */
+        :root {
+            --brand-primary: #4338ca; --brand-secondary: #4f46e5;
+            --sidebar-bg: #0f172a; --sidebar-hover: #1e293b;
+            --bg-canvas: #f1f5f9; --card-bg: #ffffff;
+            --text-main: #334155; --text-muted: #64748b; --border-color: #e2e8f0;
+        }
+
+        body { background-color: var(--bg-canvas); font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; color: var(--text-main); overflow-x: hidden; }
+
+        /* --- 登入畫面 --- */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--sidebar-bg) 0%, var(--brand-primary) 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .login-card { background: white; padding: 3rem; border-radius: 12px; width: 450px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+
+        /* --- 版面架構 (SPA) --- */
+        #wrapper { display: flex; width: 100%; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar 加入收合動畫與狀態 */
+        #sidebar { min-width: 270px; max-width: 270px; background-color: var(--sidebar-bg); color: white; display: flex; flex-direction: column; transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100; }
+        .sidebar-collapsed { margin-left: -270px; }
+
+        .sidebar-brand { padding: 1.5rem; font-size: 1.25rem; font-weight: 700; color: white; display: flex; align-items: flex-start; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-nav { padding: 1rem 0; flex-grow: 1; overflow-y: auto;}
+        .nav-item-custom { padding: 0.8rem 1.5rem; color: #cbd5e1; display: block; text-decoration: none; font-size: 0.95rem; transition: 0.2s; display: flex; align-items: center; gap: 12px; border-left: 4px solid transparent; cursor: pointer; }
+        .nav-item-custom:hover, .nav-item-custom.active { background-color: var(--sidebar-hover); color: white; border-left: 4px solid var(--brand-secondary); }
+        .sidebar-user { padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; display: flex; align-items: center; gap: 10px; }
+
+        #page-content-wrapper { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; background-color: var(--bg-canvas); }
+        .topbar { background: white; height: 65px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .main-content { flex-grow: 1; overflow-y: auto; padding: 1.5rem 2rem; position: relative;}
+
+        /* Hamburger Toggle Button */
+        .btn-sidebar-toggle { background: transparent; border: none; font-size: 1.25rem; color: #64748b; padding: 0.5rem; border-radius: 6px; transition: 0.2s; cursor: pointer; }
+        .btn-sidebar-toggle:hover { background: #f1f5f9; color: var(--brand-primary); }
+
+        /* --- 掃碼槍與工具列 --- */
+        .scanner-input-group { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); border-radius: 6px; overflow: hidden; display: flex; align-items: center; width: 200px; }
+        .scanner-input-group .icon-area { background: #0f172a; color: #10b981; padding: 8px 10px; font-size: 1rem; }
+        .scanner-input-group input { border: none; padding: 8px 10px; flex-grow: 1; outline: none; font-weight: 600; color: var(--brand-primary); font-size: 0.85rem; }
+        .scanner-input-group input::placeholder { color: #94a3b8; font-weight: 400; font-size: 0.8rem; }
+        
+        /* 隱藏原生 input type="date" 的一些圖示讓介面更乾淨 */
+        input[type="date"]::-webkit-inner-spin-button, input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
+
+        .card-enterprise { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+        .form-control-custom, .form-select-custom { border: 1px solid var(--border-color); border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.875rem; background-color: #f8fafc; }
+        .form-control-custom:focus, .form-select-custom:focus { background-color: white; border-color: var(--brand-secondary); box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2); }
+        .form-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;}
+        .btn-brand { background-color: var(--brand-primary); color: white; font-weight: 500; border: none; transition: 0.2s; }
+        .btn-brand:hover { background-color: var(--brand-secondary); color: white; }
+
+        /* --- 表格與凍結窗格 --- */
+        .table-responsive { max-height: calc(100vh - 330px); overflow: auto; border-radius: 6px; border: 1px solid var(--border-color); }
+        .table-list-view { min-width: 3200px; }
+        .table-enterprise { margin-bottom: 0; font-size: 0.85rem; }
+        .table-enterprise thead th { background-color: #f8fafc; color: var(--text-muted); font-weight: 600; padding: 10px 16px; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid var(--border-color); font-size: 0.75rem; }
+        .table-enterprise tbody td { vertical-align: middle; padding: 8px 16px; border-bottom: 1px solid var(--border-color); background: white; }
+        .table-enterprise tbody tr:hover td { background-color: #f1f5f9; }
+        
+        .sticky-col-1 { position: sticky; left: 0; z-index: 5; background-color: inherit; width: 40px; box-shadow: inset -1px 0 0 var(--border-color); }
+        .sticky-col-2 { position: sticky; left: 40px; z-index: 5; background-color: inherit; min-width: 80px; box-shadow: inset -1px 0 0 var(--border-color); }
+        .sticky-col-3 { position: sticky; left: 120px; z-index: 5; background-color: inherit; min-width: 150px; box-shadow: inset -1px 0 0 var(--border-color); }
+        .sticky-col-4 { position: sticky; left: 270px; z-index: 5; background-color: inherit; min-width: 100px; box-shadow: inset -1px 0 0 var(--border-color); }
+        .sticky-col-5 { position: sticky; left: 370px; z-index: 5; background-color: inherit; min-width: 150px; box-shadow: inset -1px 0 0 var(--border-color); }
+        .sticky-col-6 { position: sticky; left: 520px; z-index: 5; background-color: inherit; min-width: 100px; box-shadow: inset -1px 0 0 var(--border-color); }
+        .table-enterprise thead th.sticky-col-1, .table-enterprise thead th.sticky-col-2, .table-enterprise thead th.sticky-col-3, .table-enterprise thead th.sticky-col-4, .table-enterprise thead th.sticky-col-5, .table-enterprise thead th.sticky-col-6 { background-color: #f8fafc; z-index: 11; }
+
+        /* --- Badges & 統計 --- */
+        .badge-enterprise { padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 0.7rem; }
+        .bg-pass { background-color: #dcfce7; color: #166534; } .bg-fail { background-color: #fee2e2; color: #991b1b; } .bg-intermittent { background-color: #fef9c3; color: #854d0e; } .bg-pending { background-color: #f1f5f9; color: #475569; } .bg-processing { background-color: #dbeafe; color: #1e40af; }
+        .priority-high { color: #ef4444; font-weight: bold; } .ddd-overdue { color: #ef4444; font-weight: 700; } .ddd-warning { color: #f59e0b; font-weight: 600; } .ddd-normal { color: #10b981; }
+        
+        /* 支援可點擊的 Radar Badge */
+        .badge-radar { background-color: #fdf4ff; color: #d946ef; border: 1px solid #f0abfc; padding: 4px 8px; border-radius: 6px; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-weight: 700; font-size: 0.8rem; white-space: nowrap; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center;}
+        .badge-radar:hover { background-color: #fae8ff; box-shadow: 0 2px 4px rgba(217, 70, 239, 0.2); }
+        .badge-radar i { color: #475569; font-size: 0.9rem; margin-right: 5px; }
+
+        /* --- 懸浮面板 HUD --- */
+        .sn-hover { cursor: help; text-decoration: underline; text-decoration-style: dashed; text-decoration-color: #cbd5e1; }
+        .sn-hud { position: fixed; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; box-shadow: 0 15px 30px -5px rgba(0,0,0,0.15); width: 280px; pointer-events: none; z-index: 9999; display: none; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; transform: translateY(10px); }
+        .sn-hud.visible { display: block; opacity: 1; transform: translateY(0); }
+
+        /* --- 浮動批次工具列 --- */
+        .floating-toolbar { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); color: white; padding: 12px 24px; border-radius: 50px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 15px; transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1050; }
+        .floating-toolbar.show { bottom: 30px; }
+
+        .stat-card { background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); cursor: pointer; transition: 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); border-color: var(--brand-secondary); }
+        .stat-val { font-size: 1.5rem; font-weight: 800; color: var(--text-main); line-height: 1; }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 4px;}
+        .stat-icon { width: 45px; height: 45px; border-radius: 10px; background: #eff6ff; color: var(--brand-secondary); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+
+        /* --- Kanban Board --- */
+        .kanban-board { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem; height: calc(100vh - 210px); }
+        .kanban-col { flex: 1; min-width: 300px; background: #e2e8f0; border-radius: 10px; padding: 0.8rem; display: flex; flex-direction: column; transition: 0.3s; }
+        .kanban-col.drag-over { background: #cbd5e1; border: 2px dashed var(--brand-primary); }
+        .kanban-header { font-weight: 700; color: var(--text-main); font-size: 0.95rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; }
+        .kanban-cards { flex-grow: 1; overflow-y: auto; min-height: 100px; }
+        
+        .k-card { background: white; border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid var(--brand-secondary); cursor: grab; transition: transform 0.2s, box-shadow 0.2s; position: relative; }
+        .k-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .k-card:active { cursor: grabbing; }
+        .k-card.dragging { opacity: 0.5; border: 2px dashed var(--brand-primary); transform: scale(0.98); }
+        .k-card-title { font-weight: 700; color: var(--brand-primary); font-size: 0.9rem; margin-bottom: 4px; }
+        .k-card-action { position: absolute; right: 10px; top: 10px; }
+
+        /* DRI Alert Reminder Pulsing */
+        @keyframes pulse-icon { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+        .pulsing-icon { animation: pulse-icon 1.5s infinite; color: #ef4444; }
+
+        /* --- Timeline Progress in Modal --- */
+        .timeline-container { position: relative; padding: 20px 0; overflow-x: auto; }
+        .timeline-line { position: absolute; top: 35px; left: 0; width: 100%; height: 3px; background: #e2e8f0; z-index: 1; }
+        .timeline-progress { position: absolute; top: 35px; left: 0; height: 3px; background: var(--brand-primary); z-index: 2; width: 0%; transition: width 0.5s ease; }
+        .t-steps-wrapper { display: flex; justify-content: space-between; position: relative; z-index: 3; min-width: 600px; }
+        .t-item { text-align: center; flex: 1; opacity: 0.6; transition: 0.3s; position: relative; padding: 0 5px;}
+        .t-item.active { opacity: 1; font-weight: bold; }
+        .t-item.done { opacity: 1; color: var(--brand-primary); }
+        .t-icon { width: 34px; height: 34px; background: white; border: 2px solid #cbd5e1; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: 0.3s; }
+        
+        /* 發光引導動畫 (Guided Stepper) */
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+        .t-item.active .t-icon { border-color: #f59e0b; background: #fffbeb; color: #d97706; transform: scale(1.1); animation: pulse-ring 2s infinite; }
+        
+        .t-item.done .t-icon { border-color: var(--brand-primary); background: var(--brand-primary); color: white; }
+        .t-label { font-size: 0.75rem; color: var(--text-muted); }
+        .t-time-box { position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; white-space: nowrap; color: #64748b; }
+        .tracking-box-green { margin-top: 5px; font-size: 0.7rem; color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 10px; display: inline-block; font-weight: bold; }
+
+        /* --- ETA 預估時間標籤 --- */
+        .eta-badge { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-weight: 700; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; }
+
+        /* --- 彈出視窗 --- */
+        .modal-content { border: none; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+        .modal-header-custom { background-color: #f8fafc; border-bottom: 1px solid var(--border-color); border-radius: 12px 12px 0 0; padding: 1.25rem 1.5rem; }
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1060; }
+        .nav-tabs-custom .nav-link { color: var(--text-muted); font-weight: 600; border: none; border-bottom: 2px solid transparent; padding: 0.8rem 1rem; }
+        .nav-tabs-custom .nav-link.active { color: var(--brand-primary); border-bottom: 2px solid var(--brand-primary); background: transparent; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div id="login-screen">
+    <div class="login-card">
+        <div class="mb-4 text-center">
+            <div style="width: 70px; height: 70px; background: #eff6ff; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05);"><i class="fas fa-truck-fast fs-1 text-primary"></i></div>
+            <h3 class="fw-bold text-dark" style="font-size: 1.5rem;">Materials Rejudge Tracking System</h3>
+            <p class="text-muted small">Global Logistics & Traceability Platform</p>
+        </div>
+        <div class="mb-4 text-start">
+            <label class="form-label">登入身份 (Role Authorization)</label>
+            <select id="roleSelect" class="form-select form-select-custom form-select-lg">
+                <option value="SuperAdmin">系統管理員 (Super Admin)</option>
+                <option value="Engineer">工程師 (Engineer)</option>
+            </select>
+        </div>
+        <button class="btn btn-brand w-100 btn-lg rounded-3 fw-bold shadow-sm" onclick="login()">Enter Workspace <i class="fas fa-arrow-right ms-2"></i></button>
+    </div>
+</div>
+
+<div id="wrapper" style="display: none;">
+    <div id="sidebar">
+        <div class="sidebar-brand" style="align-items: flex-start;"><i class="fas fa-truck-fast text-info mt-1"></i> <span style="font-size: 1rem; line-height: 1.3;">Materials Rejudge<br>Tracking System</span></div>
+        <div class="sidebar-nav">
+            <a class="nav-item-custom active" id="nav-grid" onclick="switchNav('grid')"><i class="fas fa-table fa-fw"></i> 追蹤列表 (Tracking Grid)</a>
+            <a class="nav-item-custom" id="nav-logistics" onclick="switchNav('logistics')"><i class="fas fa-route fa-fw"></i> 完整追蹤與物流 (Logistics)</a>
+            <a class="nav-item-custom" id="nav-dashboard" onclick="switchNav('dashboard')"><i class="fas fa-chart-pie fa-fw"></i> 數據分析 (Dashboard)</a>
+            <a class="nav-item-custom" id="nav-settings" onclick="openSettingsModal()"><i class="fas fa-cog fa-fw"></i> 系統設定 (Settings)</a>
+        </div>
+        <div class="sidebar-user">
+            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;"><i class="fas fa-user"></i></div>
+            <div><div class="fw-bold" id="displayRole">Admin</div><div class="text-white-50" style="font-size: 0.7rem;">在線 (Active Session)</div></div>
+        </div>
+    </div>
+
+    <div id="page-content-wrapper">
+        <div class="topbar">
+            <div class="d-flex align-items-center">
+                <button class="btn-sidebar-toggle me-3" onclick="toggleSidebar()" title="收合/展開側邊欄"><i class="fas fa-bars"></i></button>
+                <h5 class="mb-0 fw-bold text-dark" id="topbar-title">追蹤列表 (Tracking Grid)</h5>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <!-- 新增：行事曆日期區段搜尋 -->
+                <div class="input-group shadow-sm border" style="width: 250px; border-radius: 6px; overflow: hidden; background: #f8fafc;">
+                    <span class="input-group-text bg-transparent border-0 text-muted px-2"><i class="fas fa-calendar-alt"></i></span>
+                    <input type="date" class="form-control bg-transparent border-0 px-1 text-primary fw-bold" id="filterStartDate" onchange="applyFilters()" style="font-size:0.75rem;" title="開始日期">
+                    <span class="input-group-text bg-transparent border-0 px-0 text-muted" style="font-size:0.8rem;">~</span>
+                    <input type="date" class="form-control bg-transparent border-0 px-1 text-primary fw-bold" id="filterEndDate" onchange="applyFilters()" style="font-size:0.75rem;" title="結束日期">
+                </div>
+
+                <div class="scanner-input-group me-1" title="請使用條碼機掃描 (Use Barcode Scanner)">
+                    <div class="icon-area"><i class="fas fa-barcode"></i></div>
+                    <input type="text" id="globalScanner" placeholder="Scan SN / AWB..." onkeypress="if(event.key==='Enter') handleGlobalScan(this.value)">
+                </div>
+                <div class="input-group" style="width: 180px;">
+                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 bg-light" placeholder="Search..." id="searchInput" onkeyup="applyFilters()">
+                </div>
+                <button class="btn btn-light border rounded-circle" onclick="location.reload()" title="登出 (Logout)"><i class="fas fa-sign-out-alt text-danger"></i></button>
+            </div>
+        </div>
+
+        <!-- DRI Reminder Banner -->
+        <div id="dri-reminder-banner" class="alert alert-danger mx-4 mt-3 mb-0 shadow-sm d-none align-items-center justify-content-between" style="border-left: 6px solid #ef4444;">
+            <div><i class="fas fa-exclamation-triangle fa-lg me-2 pulsing-icon"></i> <strong>行動提醒 (Action Required):</strong> 您有 <span id="dri-pending-count" class="fs-5 fw-bold text-danger mx-1">0</span> 筆單據正等待您的維護，請盡速推進物流狀態以避免逾期！</div>
+            <button class="btn btn-sm btn-danger fw-bold shadow-sm" onclick="switchNav('logistics')">前往面板處理 (Go to Kanban)</button>
+        </div>
+
+        <div class="main-content pt-3">
+            <div id="view-grid">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+                    <div class="d-flex gap-3">
+                        <div class="stat-card" onclick="document.getElementById('filterProgress').value='All'; applyFilters();">
+                            <div class="stat-icon"><i class="fas fa-database"></i></div>
+                            <div><div class="stat-val" id="countAll">0</div><div class="stat-label">總筆數 (Total)</div></div>
+                        </div>
+                        <div class="stat-card" onclick="document.getElementById('filterProgress').value='In Progress'; applyFilters();">
+                            <div class="stat-icon text-warning bg-warning bg-opacity-10"><i class="fas fa-spinner fa-spin"></i></div>
+                            <div><div class="stat-val text-warning" id="countInProgress">0</div><div class="stat-label text-warning">處理中 (Active)</div></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon text-danger bg-danger bg-opacity-10"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div><div class="stat-val text-danger" id="countOverdue">0</div><div class="stat-label text-danger">DDD 逾期 (Overdue)</div></div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary bg-white shadow-sm fw-bold" onclick="fillLazyTestData()"><i class="fas fa-magic text-warning me-1"></i> 一鍵測試資料</button>
+                        <button class="btn btn-brand shadow-sm fw-bold px-4" onclick="openAddModal()"><i class="fas fa-plus me-1"></i> 新增紀錄 (New)</button>
+                    </div>
+                </div>
+
+                <div class="card-enterprise p-3 mb-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex gap-2" id="listActions">
+                        <button class="btn btn-sm btn-outline-primary fw-bold shadow-sm" onclick="openMergeConfirmModal()"><i class="fas fa-object-group"></i> 建立批次 (Create Batch)</button>
+                        <button class="btn btn-sm btn-outline-danger shadow-sm" onclick="deleteSelected()"><i class="fas fa-trash"></i> 刪除 (Delete)</button>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <div class="btn-group shadow-sm" role="group">
+                            <input type="radio" class="btn-check" name="viewMode" id="viewList" checked onchange="toggleView('list')"><label class="btn btn-outline-primary btn-sm fw-bold" for="viewList"><i class="fas fa-list"></i> 散單 (List)</label>
+                            <input type="radio" class="btn-check" name="viewMode" id="viewBatch" onchange="toggleView('batch')"><label class="btn btn-outline-primary btn-sm fw-bold" for="viewBatch"><i class="fas fa-box-open"></i> 批次 (Batch)</label>
+                        </div>
+                        <div style="width: 1px; height: 24px; background: #cbd5e1; margin: 0 8px;"></div>
+                        <select class="form-select form-select-sm shadow-sm" id="filterResult" onchange="applyFilters()" style="width: 140px; font-weight: 500;">
+                            <option value="All">T0 結果: 全部</option>
+                            <option value="Pass">Pass</option>
+                            <option value="Fail">Fail</option>
+                            <option value="NA">未測/無 (NA)</option>
+                        </select>
+                        <select class="form-select form-select-sm shadow-sm" id="filterProgress" onchange="applyFilters()" style="width: 150px; font-weight: 500;"><option value="All">RTV 狀態: 全部</option><option value="Not Started">未啟動 (Pending)</option><option value="In Progress">處理中 (Active)</option><option value="Closed">已結案 (Closed)</option></select>
+                    </div>
+                </div>
+
+                <div class="card-enterprise overflow-hidden shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-enterprise table-hover align-middle" id="mainTable">
+                            <thead id="tableHead"></thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-logistics" style="display: none;">
+                <div class="kanban-board">
+                    <div class="kanban-col shadow-sm" id="kb-col-0-wrap" ondrop="drop(event, 0)" ondragover="allowDrop(event)">
+                        <div class="kanban-header">
+                            <div><span class="text-secondary"><i class="fas fa-inbox me-2"></i>佇列中</span> <span class="badge bg-secondary rounded-pill ms-1" id="kb-count-0">0</span></div>
+                        </div>
+                        <div class="kanban-cards" id="kb-col-0"></div>
+                    </div>
+                    
+                    <div class="kanban-col shadow-sm" id="kb-col-1-wrap" ondrop="drop(event, 1)" ondragover="allowDrop(event)">
+                        <div class="kanban-header">
+                            <div><span class="text-primary"><i class="fas fa-truck-loading me-2"></i>物流中</span> <span class="badge bg-primary rounded-pill ms-1" id="kb-count-1">0</span></div>
+                            <button class="btn btn-sm btn-light border py-0 text-success fw-bold" onclick="advanceColumn(1)" title="此欄位全部自動推進一格"><i class="fas fa-bolt"></i></button>
+                        </div>
+                        <div class="kanban-cards" id="kb-col-1"></div>
+                    </div>
+                    
+                    <div class="kanban-col shadow-sm" id="kb-col-2-wrap" ondrop="drop(event, 2)" ondragover="allowDrop(event)">
+                        <div class="kanban-header">
+                            <div><span class="text-warning text-dark"><i class="fas fa-microscope me-2"></i>FA 分析中</span> <span class="badge bg-warning text-dark rounded-pill ms-1" id="kb-count-2">0</span></div>
+                            <button class="btn btn-sm btn-light border py-0 text-success fw-bold" onclick="advanceColumn(2)" title="此欄位全部自動推進一格"><i class="fas fa-bolt"></i></button>
+                        </div>
+                        <div class="kanban-cards" id="kb-col-2"></div>
+                    </div>
+                    
+                    <div class="kanban-col shadow-sm" id="kb-col-3-wrap" ondrop="drop(event, 3)" ondragover="allowDrop(event)">
+                        <div class="kanban-header">
+                            <div><span class="text-success"><i class="fas fa-check-circle me-2"></i>已結案</span> <span class="badge bg-success rounded-pill ms-1" id="kb-count-3">0</span></div>
+                        </div>
+                        <div class="kanban-cards" id="kb-col-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-dashboard" style="display: none;">
+                <!-- 更新後的 Dashboard 排版：共 7 個圖表 -->
+                <div class="row g-4">
+                    <div class="col-md-4"><div class="card-enterprise p-4 h-100"><h6 class="fw-bold text-dark mb-3"><i class="fas fa-clock text-warning me-2"></i>DDD 滯留分佈 (DDD Distribution)</h6><div class="chart-container"><canvas id="chartDDD"></canvas></div></div></div>
+                    <div class="col-md-4"><div class="card-enterprise p-4 h-100"><h6 class="fw-bold text-dark mb-3"><i class="fas fa-industry text-primary me-2"></i>廠商不良佔比 (Defect by Vendor)</h6><div class="chart-container"><canvas id="chartVendor"></canvas></div></div></div>
+                    <div class="col-md-4"><div class="card-enterprise p-4 h-100"><h6 class="fw-bold text-dark mb-3"><i class="fas fa-mobile-alt text-success me-2"></i>機種分佈 (Model)</h6><div class="chart-container"><canvas id="chartModel"></canvas></div></div></div>
+                    
+                    <div class="col-md-5"><div class="card-enterprise p-4 h-100"><h6 class="fw-bold text-dark mb-3"><i class="fas fa-microchip text-info me-2"></i>材料佔比 (Material)</h6><div class="chart-container"><canvas id="chartMaterial"></canvas></div></div></div>
+                    <div class="col-md-7"><div class="card-enterprise p-4 h-100"><h6 class="fw-bold text-dark mb-3"><i class="fas fa-crosshairs text-danger me-2"></i>不良站點熱區 (Fail Station Hotspots)</h6><div class="chart-container"><canvas id="chartStation"></canvas></div></div></div>
+
+                    <div class="col-md-6"><div class="card-enterprise p-4 h-100"><h6 class="fw-bold text-dark mb-3"><i class="fas fa-calendar-alt text-primary me-2"></i>月統計材料 (Monthly Count)</h6><div class="chart-container" style="height: 250px;"><canvas id="chartMonthly"></canvas></div></div></div>
+                    <div class="col-md-6"><div class="card-enterprise p-4 h-100"><h6 class="fw-bold text-dark mb-3"><i class="fas fa-calendar text-success me-2"></i>年統計材料 (Yearly Count)</h6><div class="chart-container" style="height: 250px;"><canvas id="chartYearly"></canvas></div></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 恢復遺失的閃電預覽面板 (Quick Track HUD) -->
+<div class="offcanvas offcanvas-end shadow" tabindex="-1" id="quickTrackOffcanvas" style="width: 380px; border-left: 4px solid var(--brand-primary);">
+    <div class="offcanvas-header bg-light border-bottom">
+        <h5 class="offcanvas-title fw-bold text-dark"><i class="fas fa-bolt text-warning me-2"></i>快速追蹤 (Quick Track)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div id="qt-info" class="mb-4 bg-white p-3 rounded border shadow-sm"></div>
+        <h6 class="fw-bold text-muted mb-3"><i class="fas fa-stream me-2"></i>物流時間軸 (Logistics Timeline)</h6>
+        <div id="qt-timeline" class="position-relative ms-2"></div>
+        <div id="qt-action" class="mt-4 text-center border-top pt-4"></div>
+    </div>
+</div>
+
+<!-- Add Record Modal -->
+<div class="modal fade" id="addRecordModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" id="addRecordContentBox">
+            <div class="modal-header modal-header-custom">
+                <h5 class="modal-title"><i class="fas fa-file-signature text-primary me-2"></i>新增異常 / 復判紀錄 (New Issue / Retest Record)</h5>
+                <button type="button" class="btn-close" onclick="checkCloseAddModal()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <form id="addRecordForm" class="bg-white p-4 rounded border" onsubmit="event.preventDefault(); addNewRecord();">
+                    <div class="alert alert-warning small py-2 d-none" id="draft-alert"><i class="fas fa-info-circle"></i> 已為您恢復上次未儲存的草稿 (Draft Restored).</div>
+                    <div class="alert alert-info small py-2"><i class="fas fa-lightbulb"></i> <b>懶人技巧：</b> 您可以直接在表單內按下 <code>Ctrl+V</code> 貼上截圖，系統會自動辨識並存為圖片附件。</div>
+                    
+                    <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. 基本資訊與追溯 (Basic Info)</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-2"><label class="form-label">地區 (Site) *</label><select class="form-select form-select-custom req-field draft-save" id="inSite"><option value="">請選擇</option><option value="QSMC">QSMC</option><option value="QCMT">QCMT</option></select></div>
+                        <div class="col-md-2"><label class="form-label">發生時間 (Time) *</label><input type="datetime-local" class="form-control form-control-custom req-field draft-save" id="inTime"></div>
+                        <div class="col-md-2"><label class="form-label">廠區 (Factory) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inArea" placeholder="e.g. F1"></div>
+                        <div class="col-md-2"><label class="form-label">機種 (Model) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inModel" placeholder="e.g. J81a"></div>
+                        <div class="col-md-2"><label class="form-label">階段 (Stage) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inStage" placeholder="e.g. PVT"></div>
+                        <div class="col-md-2"><label class="form-label">IQC DRI *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inIqcDRI"></div>
+                    </div>
+
+                    <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">2. 材料與不良資訊 (Material & Failure Details)</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-2"><label class="form-label">廠商 (Vendor) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inVendor" list="vendorList"><datalist id="vendorList"><option value="LITEON"><option value="DELTA"></datalist></div>
+                        <div class="col-md-2"><label class="form-label">料號 (QPN) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inQPN" onblur="autoFillByQPN(this.value)"></div>
+                        <div class="col-md-2"><label class="form-label">材料 (Parts) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inParts"></div>
+                        <div class="col-md-2"><label class="form-label">序號 (SN) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inSN" placeholder="防止重複輸入"></div>
+                        <div class="col-md-2"><label class="form-label">不良站點 (Station) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inFailStation"></div>
+                        <div class="col-md-2"><label class="form-label">Radar:// *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inRadar"></div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label">不良率 (F/T) *</label>
+                            <div class="input-group input-group-sm shadow-sm">
+                                <input type="number" class="form-control req-field draft-save border-end-0" id="inDefectF" placeholder="Fail" min="0" oninput="calculateDefectRate('in')">
+                                <span class="input-group-text bg-light text-muted px-2 border-x-0">/</span>
+                                <input type="number" class="form-control req-field draft-save border-start-0" id="inDefectT" placeholder="Total" min="1" oninput="calculateDefectRate('in')">
+                                <span class="input-group-text bg-white fw-bold text-primary" id="inDefectDisplay" style="min-width:60px; justify-content:center;">-%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4"><label class="form-label text-danger">產線/測試不良描述 (Line Desc) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inDescLine"></div>
+                        <div class="col-md-5"><label class="form-label text-primary">IQC 復判不良描述 (IQC Desc) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inDescIQC"></div>
+                        
+                        <div class="col-md-6"><label class="form-label"><i class="fas fa-image text-muted"></i> 產線異常圖片 (選填 / 支援 Ctrl+V)</label><input type="file" class="form-control form-control-custom" id="inImgLine" accept="image/*"><div id="paste-preview-line" class="mt-1 small text-success fw-bold"></div></div>
+                        <div class="col-md-6"><label class="form-label"><i class="fas fa-image text-muted"></i> IQC 實物圖片 (選填 / 支援 Ctrl+V)</label><input type="file" class="form-control form-control-custom" id="inImgIQC" accept="image/*"><div id="paste-preview-iqc" class="mt-1 small text-success fw-bold"></div></div>
+                    </div>
+
+                    <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">3. 復判結果 (Retest Results)</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-2">
+                            <label class="form-label">IQC T0 結果 *</label>
+                            <select class="form-select form-select-custom req-field draft-save" id="inT0Result"><option value="">請選擇</option><option value="NA">未測/無 (NA)</option><option value="Pass">Pass</option><option value="Fail">Fail</option></select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">IQC T1 結果</label>
+                            <select class="form-select form-select-custom draft-save" id="inT1Result"><option value="">無</option><option value="NA">未測/無 (NA)</option><option value="Pass">Pass</option><option value="Fail">Fail</option></select>
+                        </div>
+                        <div class="col-md-2"><label class="form-label">復判人員 (Rev. Person) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inRev" placeholder="Vendor FAE"></div>
+                        
+                        <div class="col-md-2"><label class="form-label">外觀 (Cos.) *</label><select class="form-select form-select-custom req-field draft-save" id="resAppearance"><option value="">請選擇</option><option value="OK">OK</option><option value="NG">NG</option></select></div>
+                        <div class="col-md-2"><label class="form-label">尺寸 (Dim.) *</label><select class="form-select form-select-custom req-field draft-save" id="resDimension"><option value="">請選擇</option><option value="OK">OK</option><option value="OOS">OOS</option><option value="NG">NG</option><option value="NA">NA</option></select></div>
+                        <div class="col-md-2"><label class="form-label">功能 (Func.) *</label><select class="form-select form-select-custom req-field draft-save" id="resFunction"><option value="">請選擇</option><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="Not Test">Not Test</option><option value="Intermittent">Intermittent</option></select></div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-4 bg-light p-3 rounded border">
+                         <div class="form-check form-switch"><input class="form-check-input draft-save" type="checkbox" id="inPriority" style="transform: scale(1.2); margin-top: 0.3rem;"><label class="form-check-label text-danger fw-bold ms-2">標記為急件 (High Priority)</label></div>
+                        <button type="submit" class="btn btn-brand px-5 py-2 fw-bold shadow-sm"><i class="fas fa-save me-2"></i> 儲存紀錄 (Save Record)</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Tracking Modal -->
+<div class="modal fade" id="rtvModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header modal-header-custom d-flex justify-content-between align-items-center">
+                <h5 class="modal-title mb-0"><i class="fas fa-route text-primary me-2"></i>完整追蹤與物流 (Full Tracking & Logistics)</h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-success fw-bold bg-white" onclick="openPublicTracking()"><i class="fas fa-link me-1"></i> 複製追蹤連結 (Link)</button>
+                    <button class="btn btn-sm btn-outline-dark fw-bold bg-white" onclick="printShippingLabel()"><i class="fas fa-print text-primary me-1"></i> 列印 RTV 面單 (Print Label)</button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body bg-light p-4">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3"><div class="card p-3 h-100 border-0 shadow-sm border-start border-4 border-primary"><div class="stat-label">QPN / Model</div><div class="fw-bold fs-6 text-dark mt-1" id="m-qpn">--</div><div class="text-muted small" id="m-model">--</div></div></div>
+                    <div class="col-md-3"><div class="card p-3 h-100 border-0 shadow-sm border-start border-4 border-success"><div class="stat-label">SN List</div><div id="m-sn-list" class="small mt-1 text-dark fw-medium" style="max-height:60px; overflow-y:auto;"></div></div></div>
+                    <div class="col-md-3"><div class="card p-3 h-100 border-0 shadow-sm border-start border-4 border-danger"><div class="stat-label text-danger">IQC Fail Desc.</div><div class="small mt-1 text-danger fw-medium" id="m-descIQC">--</div></div></div>
+                    <div class="col-md-3"><div class="card p-3 h-100 border-0 shadow-sm border-start border-4 border-info"><div class="stat-label">Line Fail Desc.</div><div class="small mt-1 text-dark fw-medium" id="m-descLine">--</div></div></div>
+                </div>
+
+                <div class="card p-3 mb-3 border-0 shadow-sm d-flex flex-row justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fw-bold text-main">物流方式 (Mode):</span>
+                        <div class="btn-group shadow-sm" role="group">
+                            <!-- 修正白字問題，移除 bg-white -->
+                            <input type="radio" class="btn-check" name="rtvMode" id="modeCourier" onchange="changeRTVMode('Courier')"><label class="btn btn-outline-primary btn-sm" for="modeCourier"><i class="fas fa-shipping-fast"></i> Courier (快遞)</label>
+                            <input type="radio" class="btn-check" name="rtvMode" id="modeCargo" onchange="changeRTVMode('Cargo')"><label class="btn btn-outline-primary btn-sm" for="modeCargo"><i class="fas fa-dolly"></i> Cargo (退運)</label>
+                        </div>
+                    </div>
+                    <div id="m-eta-display" style="display:none; align-items:center;"></div>
+                </div>
+
+                <div class="card p-4 border-0 shadow-sm mb-4">
+                    <div class="timeline-container"><div class="timeline-line"></div><div class="timeline-progress" id="t-progress"></div><div id="t-steps" class="t-steps-wrapper"></div></div>
+                    
+                    <div class="mt-4 p-3 bg-white border rounded text-center" id="action-area" style="display:none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                        <div class="row justify-content-center align-items-end g-3">
+                            <div class="col-auto text-start"><label class="form-label">完成時間 (Time)</label><input type="datetime-local" class="form-control form-control-custom" id="actionTime"></div>
+                            
+                            <!-- 快遞模式: 單號輸入 -->
+                            <div class="col-auto text-start" id="trackingInputArea" style="display:none;">
+                                <label class="form-label">快遞公司 & 單號 <span class="text-danger">*</span></label>
+                                <div class="input-group input-group-sm" style="width: 250px;">
+                                    <select class="form-select form-select-custom shadow-sm" id="courierCompany" style="max-width: 90px; padding-right: 0.5rem;">
+                                        <option value="順豐" selected>順豐</option>
+                                        <option value="FedEx">FedEx</option>
+                                        <option value="UPS">UPS</option>
+                                        <option value="DHL">DHL</option>
+                                    </select>
+                                    <input type="text" class="form-control form-control-custom shadow-sm border-start-0" id="trackingNoInput" placeholder="AWB...">
+                                </div>
+                            </div>
+                            
+                            <!-- 退運模式: Kick Off 細部進度選擇 -->
+                            <div class="col-auto text-start" id="cargoSubStepArea" style="display:none;">
+                                <label class="form-label text-primary"><i class="fas fa-tasks"></i> 退運 Kick Off 細部進度</label>
+                                <div class="input-group input-group-sm" style="width: 280px;">
+                                    <select class="form-select form-select-custom shadow-sm border-primary" id="cargoSubStepInput" style="font-weight:bold;">
+                                        <option value="材料移交中">材料移交中 (Handover)</option>
+                                        <option value="五方對點進行中">五方對點進行中 (5-Way Check)</option>
+                                        <option value="已退到不良品倉">已退到不良品倉 (RMA WH)</option>
+                                        <option value="採購做單中">採購做單中 (PO Proc.)</option>
+                                    </select>
+                                    <button class="btn btn-primary shadow-sm" type="button" onclick="updateCargoSubStep()">確認</button>
+                                </div>
+                            </div>
+
+                            <div class="col-auto">
+                                <button class="btn btn-brand px-3 py-2 fw-bold shadow-sm" onclick="nextStepModal()"><i class="fas fa-check-circle me-1"></i> 手動提交 (Submit)</button>
+                                <button class="btn btn-success px-3 py-2 fw-bold shadow-sm ms-2" id="btn-api-sync" onclick="simulateAPISync()"><i class="fas fa-satellite-dish me-1"></i> Sync 快遞狀態 (API)</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3"><button id="btn-prev" class="btn btn-sm btn-link text-muted text-decoration-none" onclick="prevStep()" style="display:none;"><i class="fas fa-undo"></i> 管理員回退 (Admin Revert)</button></div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#collapseLogs" style="cursor: pointer;" title="點擊展開/隱藏">
+                                <span><i class="fas fa-history text-muted me-2"></i>日誌 (Audit Logs)</span>
+                                <i class="fas fa-chevron-down text-muted" style="font-size:0.8rem;"></i>
+                            </div>
+                            <div id="collapseLogs" class="collapse">
+                                <div class="card-body bg-light">
+                                    <div id="log-container" class="log-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6"><div class="card border-0 shadow-sm h-100"><div class="card-header bg-white fw-bold py-3"><i class="fas fa-comments text-muted me-2"></i>留言板 (Team Comments)</div><div class="card-body bg-light d-flex flex-column"><div id="comment-container" class="comment-list flex-grow-1 mb-2"></div><div class="input-group mt-auto"><input type="text" class="form-control form-control-custom" id="newComment" placeholder="Press Enter to send..." onkeypress="if(event.key==='Enter') addComment();"><button class="btn btn-outline-primary" onclick="addComment()"><i class="fas fa-paper-plane"></i></button></div></div></div></div>
+                </div>
+                
+                <div class="mt-2">
+                    <button class="btn btn-outline-secondary w-100 fw-bold border-dashed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseImages" aria-expanded="false" aria-controls="collapseImages" style="border-style: dashed;">
+                        <i class="fas fa-images me-2 text-success"></i> 展開不良圖片 (View Defect Images)
+                    </button>
+                    <div class="collapse mt-3" id="collapseImages">
+                        <div class="card card-body bg-white border-0 shadow-sm" id="m-images"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="mergeModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header modal-header-custom"><h5 class="modal-title">📦 建立批次 (Create RTV Batch)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p>即將合併 <b id="mergeCount" class="text-primary fs-5">0</b> 筆資料。</p><ul id="mergeList" class="list-group list-group-flush border rounded small mb-3" style="max-height: 150px; overflow-y:auto;"></ul><div class="mb-2"><label class="form-label">自訂批次名稱 (Batch ID / Name)</label><input type="text" class="form-control form-control-custom" id="mergeBatchName"></div></div><div class="modal-footer border-0"><button type="button" class="btn btn-light" data-bs-dismiss="modal">取消 (Cancel)</button><button type="button" class="btn btn-brand" onclick="confirmMerge()">確認合併 (Confirm Merge)</button></div></div></div></div>
+
+<!-- Smart Consolidation Alert Modal -->
+<div class="modal fade" id="smartConsolidateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center p-3">
+            <div class="modal-body">
+                <div class="mb-3 text-primary"><i class="fas fa-robot fa-3x"></i></div>
+                <h5 class="fw-bold">Smart AI 建議</h5>
+                <p class="text-muted">系統偵測到同廠商 (<span id="sc-vendor" class="fw-bold"></span>) 還有 <span id="sc-count" class="text-danger fw-bold"></span> 筆待處理的 RTV 單據。</p>
+                <p class="small">是否要將它們一併加入此批次處理？</p>
+                <div class="d-flex justify-content-center gap-2 mt-4">
+                    <button class="btn btn-light" data-bs-dismiss="modal" onclick="proceedModeChange(false)">僅處理此單 (No)</button>
+                    <button class="btn btn-brand fw-bold" onclick="executeSmartConsolidation()">✨ 是，一鍵合併 (Yes, Merge All)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Super Admin Full Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content">
+    <div class="modal-header bg-warning"><h5 class="modal-title text-dark">✏️ 管理員全面編輯 (Super Admin Edit)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body bg-light">
+        <input type="hidden" id="edit-id">
+        <div class="row g-2 mb-3 bg-white p-3 rounded border">
+            <h6 class="text-dark fw-bold w-100 border-bottom pb-2">基本與追溯資訊</h6>
+            <div class="col-md-2"><label class="form-label">地區</label><input type="text" class="form-control form-control-sm" id="edit-site"></div>
+            <div class="col-md-2"><label class="form-label">廠區 (Factory)</label><input type="text" class="form-control form-control-sm" id="edit-area"></div>
+            <div class="col-md-2"><label class="form-label">發生時間</label><input type="datetime-local" class="form-control form-control-sm" id="edit-time"></div>
+            <div class="col-md-2"><label class="form-label">機種</label><input type="text" class="form-control form-control-sm" id="edit-model"></div>
+            <div class="col-md-2"><label class="form-label">階段</label><input type="text" class="form-control form-control-sm" id="edit-stage"></div>
+            <div class="col-md-2"><label class="form-label">IQC DRI</label><input type="text" class="form-control form-control-sm" id="edit-iqcDRI"></div>
+        </div>
+        <div class="row g-2 mb-3 bg-white p-3 rounded border">
+            <h6 class="text-dark fw-bold w-100 border-bottom pb-2">材料與不良描述</h6>
+            <div class="col-md-2"><label class="form-label">Vendor</label><input type="text" class="form-control form-control-sm" id="edit-vendor"></div>
+            <div class="col-md-2"><label class="form-label">QPN</label><input type="text" class="form-control form-control-sm" id="edit-qpn"></div>
+            <div class="col-md-2"><label class="form-label">Parts</label><input type="text" class="form-control form-control-sm" id="edit-parts"></div>
+            <div class="col-md-2"><label class="form-label">SN</label><input type="text" class="form-control form-control-sm" id="edit-sn"></div>
+            <div class="col-md-2"><label class="form-label">不良站點</label><input type="text" class="form-control form-control-sm" id="edit-failStation"></div>
+            <div class="col-md-2"><label class="form-label">Radar://</label><input type="text" class="form-control form-control-sm" id="edit-radar"></div>
+            
+            <div class="col-md-3">
+                <label class="form-label">不良率 (F/T)</label>
+                <div class="input-group input-group-sm">
+                    <input type="number" class="form-control" id="editDefectF" placeholder="Fail" min="0" oninput="calculateDefectRate('edit')">
+                    <span class="input-group-text bg-light text-muted px-2">/</span>
+                    <input type="number" class="form-control" id="editDefectT" placeholder="Total" min="1" oninput="calculateDefectRate('edit')">
+                    <span class="input-group-text bg-white fw-bold text-primary" id="editDefectDisplay" style="min-width:60px; justify-content:center;">-%</span>
+                </div>
+            </div>
+            <div class="col-md-4"><label class="form-label text-danger">產線不良描述</label><input type="text" class="form-control form-control-sm" id="edit-descLine"></div>
+            <div class="col-md-5"><label class="form-label text-primary">IQC 復判描述</label><input type="text" class="form-control form-control-sm" id="edit-descIQC"></div>
+        </div>
+        <div class="row g-2 bg-white p-3 rounded border">
+            <h6 class="text-dark fw-bold w-100 border-bottom pb-2">復判結果</h6>
+            <div class="col-md-2">
+                <label class="form-label">IQC T0 結果</label>
+                <select class="form-select form-select-sm" id="edit-t0Result"><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="NA">未測/無 (NA)</option></select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">IQC T1 結果</label>
+                <select class="form-select form-select-sm" id="edit-t1Result"><option value="">無</option><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="NA">未測/無 (NA)</option></select>
+            </div>
+            <div class="col-md-2"><label class="form-label">復判人員</label><input type="text" class="form-control form-control-sm" id="edit-rev"></div>
+            
+            <div class="col-md-2"><label class="form-label">外觀 (Cos.)</label><select class="form-select form-select-sm" id="edit-resApp"><option value="">無</option><option value="OK">OK</option><option value="NG">NG</option></select></div>
+            <div class="col-md-2"><label class="form-label">尺寸 (Dim.)</label><select class="form-select form-select-sm" id="edit-resDim"><option value="">無</option><option value="OK">OK</option><option value="OOS">OOS</option><option value="NG">NG</option><option value="NA">NA</option></select></div>
+            <div class="col-md-2"><label class="form-label">功能 (Func.)</label><select class="form-select form-select-sm" id="edit-resFunc"><option value="">無</option><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="Not Test">Not Test</option><option value="Intermittent">Intermittent</option></select></div>
+        </div>
+        <div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" id="edit-priority"><label class="form-check-label text-danger fw-bold ms-2" for="edit-priority">標記為急件 (High Priority)</label></div>
+    </div>
+    <div class="modal-footer border-0 bg-light"><button type="button" class="btn btn-warning fw-bold px-4" onclick="saveEdit()">強制更新儲存 (Force Save)</button></div>
+</div></div></div>
+
+<!-- Expanded Settings Modal -->
+<div class="modal fade" id="settingsModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header bg-dark text-white"><h5 class="modal-title"><i class="fas fa-cogs me-2"></i> 系統設定 (System Configuration)</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body p-0">
+        <ul class="nav nav-tabs nav-tabs-custom px-3 pt-3 bg-light border-bottom" id="settingsTab">
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#set-email"><i class="fas fa-envelope"></i> 郵件與群組 (Routing)</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#set-ddd"><i class="fas fa-stopwatch"></i> DDD 與預警 (Workflow)</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#set-adv"><i class="fas fa-sliders-h"></i> 進階與自動化 (Advanced)</a></li>
+        </ul>
+        <div class="tab-content p-4">
+            <div class="tab-pane fade show active" id="set-email">
+                <div class="alert alert-secondary small"><i class="fas fa-info-circle"></i> 郵件發送邏輯將基於 Model + Default CC 群組。自動判定 DRI (IQC / SQE) 並推播。</div>
+                <div class="mb-3"><label class="form-label text-dark">Mail Group Routing (預設發送群組)</label><textarea class="form-control form-control-custom" id="cfg-mailgroup" rows="2">BU6_IQC@quantacn.com; QMH_IQC@quantacn.com</textarea></div>
+                <div class="mb-3"><label class="form-label text-dark">Default CC</label><input type="text" class="form-control form-control-custom" value="BU6_IQC@quantacn.com"></div>
+            </div>
+            <div class="tab-pane fade" id="set-ddd">
+                <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label text-dark">DDD 警告天數 (Warning Threshold)</label><input type="number" class="form-control form-control-custom" value="3"></div>
+                    <div class="col-md-4"><label class="form-label text-dark">DDD 逾期天數 (Overdue Threshold)</label><input type="number" class="form-control form-control-custom" value="7"></div>
+                    <div class="col-md-4"><label class="form-label text-dark text-primary fw-bold">預設 ETA 天數 (Default ETA Days)</label><input type="number" class="form-control form-control-custom border-primary bg-white" id="cfg-eta" value="7"></div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="set-adv">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" checked><label class="form-check-label text-dark">啟用快遞 API 自動同步 (Enable Auto API Sync)</label></div>
+                        <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" checked><label class="form-check-label text-dark">物流到達後自動觸發 FA 分析計時 (Auto trigger FA Timer)</label></div>
+                        <div class="form-check form-switch mb-4"><input class="form-check-input" type="checkbox"><label class="form-check-label text-dark">預設啟用暗黑模式 (Dark Mode Default) - <span class="text-muted small">即將推出</span></label></div>
+                    </div>
+                    <div class="col-md-6"><label class="form-label text-dark">已結案資料保留天數 (Archive Retention Days)</label><select class="form-select form-select-custom"><option>30 天</option><option selected>90 天</option><option>180 天</option><option>永久保留</option></select></div>
+                    <div class="col-md-6"><label class="form-label text-dark">登入預設視圖 (Default Landing View)</label><select class="form-select form-select-custom"><option>追蹤列表 (Grid)</option><option selected>完整追蹤 Kanban (Logistics)</option><option>數據分析 (Dashboard)</option></select></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer border-top px-4 py-3 bg-light"><button type="button" class="btn btn-dark px-4" onclick="saveEmailConfig()">儲存設定 (Save Configuration)</button></div>
+</div></div></div>
+
+<!-- 懸浮 HUD 容器 -->
+<div id="sn-hover-hud" class="sn-hud"></div>
+
+<!-- 浮動批次工具列 -->
+<div id="floating-batch-bar" class="floating-toolbar">
+    <span id="batch-sel-count" class="fw-bold text-warning" style="font-size: 0.95rem;">已選擇 0 筆單據</span>
+    <div style="width:1px; height:20px; background:rgba(255,255,255,0.2);"></div>
+    <button class="btn btn-sm btn-success fw-bold rounded-pill shadow-sm" onclick="batchAdvanceGrid()"><i class="fas fa-forward me-1"></i> 同步更新為下一階段</button>
+    <button class="btn btn-sm btn-light fw-bold rounded-pill text-dark shadow-sm" onclick="openMergeConfirmModal()"><i class="fas fa-object-group me-1"></i> 建立批次</button>
+</div>
+
+<!-- 逾期主動推播 Modal -->
+<div class="modal fade" id="overdueAlertModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border: 2px solid #ef4444;">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-siren-on me-2"></i>🚨 急件待辦提醒 (Action Required)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <p class="text-dark fw-bold mb-2">系統偵測到以下單據已超過 7 天未推進，請盡速處理：</p>
+                <ul class="list-group shadow-sm" id="overdue-alert-list" style="max-height: 250px; overflow-y:auto;">
+                    <!-- 動態載入 -->
+                </ul>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-danger w-100 fw-bold" data-bs-dismiss="modal" onclick="switchNav('logistics')">前往 Kanban 處理</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="printArea" style="display: none;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // --- 資料庫初始化 ---
+    let defaultData = [
+        { id: 1, priority: true, site: 'QSMC', occurTime: '2023-11-01T08:00', area: 'F1', model: 'J81a', stage: 'PVT', iqcDRI: 'Alex', vendor: 'LITEON', qpn: 'AA130WQ1000', parts: 'IC', sn: 'SN-001', failStation: 'FATP', radar: '1234567', descLine: 'No Power on mainboard', descIQC: 'Pin broken', t0Result: 'Fail', t1Result: '', defectRate: '1F/50T=2%', rev: 'Tom FAE', resApp: 'NG', resDim: 'OK', resFunc: 'Not Test', hasImg: true, rtv: 'Yes', rtvBatchId: 'Batch-1001', rtvType: 'Courier', courierComp: '順豐', trackingNo: 'SF999999999', step: 3, cargoSubStep: '', eta: '2023-11-08', ata: '', delayStatus: '', timestamps: ['2023-11-01T10:00','2023-11-02T10:00','2023-11-03T10:00','2023-11-04T10:00'], createdAt: '2023-11-01', logs: [], comments: [] },
+        { id: 2, priority: false, site: 'QCMT', occurTime: '2023-11-20T09:00', area: 'F2', model: 'M2', stage: 'EVT', iqcDRI: 'Bob', vendor: 'DELTA', qpn: 'BB550XD2000', parts: 'Resistor', sn: 'SN-002', failStation: 'CR', radar: '4567890', descLine: 'Scratch', descIQC: 'Scratch confirmed', t0Result: 'Pass', t1Result: 'Pass', defectRate: '0F/100T=0%', rev: 'Jerry FAE', resApp: 'OK', resDim: 'OK', resFunc: 'Pass', hasImg: false, rtv: 'No', rtvBatchId: null, rtvType: '', courierComp: '', trackingNo: '', step: 0, cargoSubStep: '', eta: '', ata: '', delayStatus: '', timestamps: [], createdAt: '2023-11-25', logs: [], comments: [] }
+    ];
+
+    let db = JSON.parse(localStorage.getItem('rtv_db')) || defaultData;
+    function saveDB() { localStorage.setItem('rtv_db', JSON.stringify(db)); }
+
+    const stepsCourier = ["Kick Off", "已離廠 (Departed)", "快遞中 (In Transit)", "快遞單號 (Tracking)", "已抵達 (Arrived)", "FA進行中 (FA Proc.)", "FA已完成 (Closed)"];
+    const stepsCargo   = ["Kick Off", "已離廠 (Departed)", "退運中 (In Transit)", "已抵達 (Arrived)", "FA進行中 (FA Proc.)", "FA已完成 (Closed)"];
+    let currentUserRole = '', currentDetailId = null, currentView = 'list';
+    let charts = {};
+    let pendingMode = null; 
+
+    // --- Sidebar Toggle Logic ---
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('sidebar-collapsed');
+    }
+
+    function login() {
+        currentUserRole = document.getElementById('roleSelect').value;
+        document.getElementById('displayRole').innerText = currentUserRole === 'SuperAdmin' ? 'System Admin' : 'Engineer';
+        
+        // --- 【權限控管：非 SuperAdmin 隱藏特定選單】 ---
+        if (currentUserRole !== 'SuperAdmin') {
+            document.getElementById('nav-dashboard').style.display = 'none';
+            document.getElementById('nav-settings').style.display = 'none';
+        } else {
+            document.getElementById('nav-dashboard').style.display = 'flex';
+            document.getElementById('nav-settings').style.display = 'flex';
+        }
+
+        document.getElementById('login-screen').style.display = 'none'; 
+        document.getElementById('wrapper').style.display = 'flex';
+        initLazyDefaults(); 
+        applyFilters();
+        if(currentView === 'logistics') renderKanban();
+        initDraftAndPasteListener();
+        document.getElementById('globalScanner').focus(); 
+        
+        // --- 【主動推播：檢查逾期單據】 ---
+        setTimeout(checkOverdueAlert, 800);
+    }
+
+    // --- 【超時主動提醒模組】 ---
+    function checkOverdueAlert() {
+        // --- 【權限控管：SuperAdmin 不主動彈出急件提醒】 ---
+        if (currentUserRole === 'SuperAdmin') return;
+
+        let overdues = db.filter(d => {
+            if(d.rtv !== 'Yes' || !d.rtvType) return false;
+            let sArr = d.rtvType === 'Courier' ? stepsCourier : stepsCargo;
+            if(d.step >= sArr.length) return false;
+            
+            // 權限過濾：只提示跟自己有關的
+            let dri = getDRI(d.step, d.rtvType);
+            // 修正：因為 DRI 已經全面改為 SQE，所以 Engineer 應該追蹤包含 SQE 的關卡
+            if (currentUserRole === 'Engineer' && !dri.includes('SQE')) return false;
+
+            let ddd = Math.floor((new Date() - new Date(d.createdAt))/(86400000));
+            return ddd > 7;
+        });
+
+        if(overdues.length > 0) {
+            let listHtml = overdues.map(o => `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold text-primary">${o.qpn}</div>
+                        <div class="small text-muted">SN: ${o.sn} | 廠商: ${o.vendor}</div>
+                    </div>
+                    <span class="badge bg-danger rounded-pill fs-6">${Math.floor((new Date() - new Date(o.createdAt))/(86400000))} 天</span>
+                </li>
+            `).join('');
+            document.getElementById('overdue-alert-list').innerHTML = listHtml;
+            let m = new bootstrap.Modal(document.getElementById('overdueAlertModal'));
+            m.show();
+        }
+    }
+
+    // --- 【自動計算不良率模組】 ---
+    function calculateDefectRate(prefix) {
+        let fStr = document.getElementById(prefix + 'DefectF').value;
+        let tStr = document.getElementById(prefix + 'DefectT').value;
+        let f = parseFloat(fStr);
+        let t = parseFloat(tStr);
+        let display = document.getElementById(prefix + 'DefectDisplay');
+        
+        if (!isNaN(f) && !isNaN(t) && t > 0) {
+            let pct = ((f / t) * 100);
+            display.innerText = (pct % 1 === 0 ? pct : pct.toFixed(1)) + '%';
+        } else {
+            display.innerText = '-%';
+        }
+    }
+
+    // --- 【DRI 判斷引擎：已支援 IQC>>SQE 轉交，後續全由 SQE 負責】---
+    function getDRI(idx, type) {
+        if(idx === 0) return 'IQC';
+        if(idx === 1) return 'IQC>>SQE'; // 離廠轉交階段
+        return 'SQE'; // 依據需求，離廠後的所有階段 DRI 皆改為 SQE
+    }
+
+    // --- 【DRI 動態提醒橫幅】---
+    function updateDRIReminder() {
+        let count = 0;
+        
+        // --- 【權限控管：SuperAdmin 隱藏橫幅】 ---
+        if (currentUserRole !== 'SuperAdmin') {
+            db.forEach(item => {
+                if (item.rtv !== 'Yes' || !item.rtvType) return;
+                let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
+                if (item.step >= sArr.length) return; 
+                
+                let dri = getDRI(item.step, item.rtvType); 
+                // 修正：Engineer 需追蹤已接手 (SQE) 的關卡
+                if (currentUserRole === 'Engineer' && dri.includes('SQE')) count++;
+            });
+        }
+        
+        let banner = document.getElementById('dri-reminder-banner');
+        if (banner) {
+            if (count > 0) {
+                document.getElementById('dri-pending-count').innerText = count;
+                banner.classList.remove('d-none');
+                banner.classList.add('d-flex');
+            } else {
+                banner.classList.add('d-none');
+                banner.classList.remove('d-flex');
+            }
+        }
+    }
+
+    function setElText(id, text) { let el = document.getElementById(id); if(el) el.innerText = text || '--'; }
+
+    function switchNav(viewId) {
+        document.querySelectorAll('.nav-item-custom').forEach(el => el.classList.remove('active'));
+        document.getElementById('nav-' + viewId).classList.add('active');
+        document.getElementById('view-grid').style.display = 'none';
+        document.getElementById('view-logistics').style.display = 'none';
+        document.getElementById('view-dashboard').style.display = 'none';
+
+        if (viewId === 'grid') {
+            document.getElementById('view-grid').style.display = 'block'; document.getElementById('topbar-title').innerText = '追蹤列表 (Tracking Grid)'; applyFilters();
+        } else if (viewId === 'logistics') {
+            document.getElementById('view-logistics').style.display = 'block'; document.getElementById('topbar-title').innerText = '完整追蹤與物流 (Kanban Logistics)'; renderKanban();
+        } else if (viewId === 'dashboard') {
+            document.getElementById('view-dashboard').style.display = 'block'; document.getElementById('topbar-title').innerText = '數據分析 (Dashboard)'; renderCharts();
+        }
+    }
+
+    function handleGlobalScan(val) {
+        if(!val) return;
+        let item = db.find(d => d.sn.toLowerCase() === val.toLowerCase() || d.qpn.toLowerCase() === val.toLowerCase() || (d.trackingNo && d.trackingNo.toLowerCase() === val.toLowerCase()));
+        if(item) {
+            showToast("掃描成功", `已定位紀錄: ${item.sn}`, 2000);
+            openQuickTrack(item.id); document.getElementById('globalScanner').value = ''; document.getElementById('globalScanner').blur();
+        } else {
+            showToast("掃描失敗", `找不到與 ${val} 相符的紀錄。`, 3000); document.getElementById('globalScanner').value = '';
+        }
+    }
+
+    // --- 【Radar 一鍵複製功能】 ---
+    window.copyRadar = function(val) {
+        if(event) event.stopPropagation(); 
+        const el = document.createElement('textarea');
+        el.value = `Radar://${val}`;
+        el.setAttribute('readonly', '');
+        el.style.position = 'absolute';
+        el.style.left = '-9999px';
+        document.body.appendChild(el);
+        el.select(); // 移除 el.focus() 避免觸發焦點攔截
+        el.setSelectionRange(0, 99999); 
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        showToast("複製成功", `已複製 Radar://${val}`, 2000);
+    }
+
+    // --- 【懸浮 HUD 邏輯】 ---
+    window.showHUD = function(e, id) {
+        let item = db.find(d => d.id === id);
+        if(!item) return;
+        let hud = document.getElementById('sn-hover-hud');
+        let imgHtml = item.hasImg ? `<div style="height:120px; background:#f1f5f9; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#64748b; border: 1px dashed #cbd5e1;"><i class="fas fa-image fa-2x mb-1"></i><span style="font-size:0.7rem;">附有不良圖片</span></div>` : '';
+        hud.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="fw-bold text-primary fs-6">${item.sn}</div>
+                <span class="badge bg-light text-dark border">${item.vendor}</span>
+            </div>
+            <div class="small text-danger fw-bold mb-1"><i class="fas fa-times-circle me-1"></i> ${item.descIQC}</div>
+            <div class="small text-muted mb-2"><i class="fas fa-industry me-1"></i> 站點: ${item.failStation}</div>
+            ${imgHtml}
+        `;
+        // 計算位置避免超出螢幕
+        let x = e.clientX + 15;
+        let y = e.clientY + 15;
+        if (y + 200 > window.innerHeight) y = window.innerHeight - 220;
+        
+        hud.style.left = x + 'px';
+        hud.style.top = y + 'px';
+        hud.classList.add('visible');
+    }
+    
+    window.hideHUD = function() {
+        document.getElementById('sn-hover-hud').classList.remove('visible');
+    }
+
+    // --- 【浮動工具列控制】 ---
+    window.handleRowCheck = function() {
+        let checkedCount = document.querySelectorAll('.row-cb:checked').length;
+        let tb = document.getElementById('floating-batch-bar');
+        if (checkedCount > 0) {
+            document.getElementById('batch-sel-count').innerText = `已選擇 ${checkedCount} 筆單據`;
+            tb.classList.add('show');
+        } else {
+            tb.classList.remove('show');
+        }
+    }
+
+    function toggleAll() { 
+        let c = document.getElementById('checkAll'); 
+        if(!c) return; 
+        let isC = c.checked; 
+        document.querySelectorAll('.row-cb').forEach(cb => {
+            // 只有可見的列才全選
+            if(cb.closest('tr').style.display !== 'none') cb.checked = isC;
+        }); 
+        handleRowCheck();
+    }
+
+    window.batchAdvanceGrid = function() {
+        let cbs = document.querySelectorAll('.row-cb:checked'); 
+        if(cbs.length < 1) return;
+        
+        if(!confirm(`確定要將這 ${cbs.length} 筆單據同步推進至下一個狀態嗎？\n(若有缺少單號系統會自動補齊)`)) return;
+
+        let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        let timeStr = now.toISOString().slice(0,16);
+        let updated = 0;
+
+        cbs.forEach(cb => {
+            let id = parseInt(cb.value);
+            let item = db.find(d => d.id === id);
+            if(item && item.rtv === 'Yes' && item.rtvType) {
+                let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
+                if(item.step < sArr.length) {
+                    let nextName = sArr[item.step];
+                    if (item.rtvType === 'Courier' && nextName.includes('快遞單號') && (!item.trackingNo || item.trackingNo === '')) {
+                        item.trackingNo = 'AUTO-' + Date.now().toString().slice(-6);
+                        item.courierComp = '順豐';
+                    }
+                    if(!item.timestamps) item.timestamps = [];
+                    item.timestamps[item.step] = timeStr;
+                    
+                    if(nextName.includes('已抵達')) {
+                        item.ata = timeStr.split('T')[0];
+                        if(item.eta && item.ata > item.eta) item.delayStatus = 'Delayed'; else item.delayStatus = 'On Time';
+                    }
+                    item.step++;
+                    addLog(item, currentUserRole, `[列表批量推進] 完成: ${nextName}`);
+                    updated++;
+                }
+            }
+        });
+
+        if(updated > 0) {
+            saveDB();
+            applyFilters(); // Re-render grid
+            document.querySelectorAll('.row-cb').forEach(c => c.checked = false);
+            document.getElementById('checkAll').checked = false;
+            handleRowCheck(); // Hide toolbar
+            showToast("批量同步成功", `已成功更新 ${updated} 筆單據狀態！`);
+        } else {
+            showToast("提示", "選取的單據無法推進 (可能尚未設定物流或已結案)。");
+        }
+    }
+
+    let isFormDirty = false;
+    let pastedImages = { line: false, iqc: false }; 
+
+    function initDraftAndPasteListener() {
+        const inputs = document.querySelectorAll('.draft-save');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                isFormDirty = true; 
+                let draft = {};
+                inputs.forEach(i => draft[i.id] = i.type === 'checkbox' ? i.checked : i.value);
+                localStorage.setItem('rtv_draft', JSON.stringify(draft));
+            });
+        });
+
+        document.getElementById('addRecordContentBox').addEventListener('paste', function(e) {
+            if(!e.clipboardData || !e.clipboardData.items) return;
+            for(let i=0; i<e.clipboardData.items.length; i++) {
+                let item = e.clipboardData.items[i];
+                if(item.type.indexOf('image') !== -1) {
+                    if(!pastedImages.line) {
+                        document.getElementById('paste-preview-line').innerText = "✓ 已從剪貼簿獲取圖片";
+                        pastedImages.line = true; isFormDirty = true;
+                        showToast("貼圖成功", "已將截圖附加至 [產線異常圖片]", 2000);
+                    } else if(!pastedImages.iqc) {
+                        document.getElementById('paste-preview-iqc').innerText = "✓ 已從剪貼簿獲取圖片";
+                        pastedImages.iqc = true; isFormDirty = true;
+                        showToast("貼圖成功", "已將截圖附加至 [IQC實物圖片]", 2000);
+                    }
+                }
+            }
+        });
+    }
+
+    function checkCloseAddModal() {
+        if(isFormDirty) {
+            if(confirm("您有尚未儲存的資料，確定要關閉視窗嗎？(草稿會保留)")) {
+                closeAddModal();
+            }
+        } else {
+            closeAddModal();
+        }
+    }
+
+    function openAddModal() { 
+        let draft = localStorage.getItem('rtv_draft');
+        if (draft) {
+            draft = JSON.parse(draft);
+            document.querySelectorAll('.draft-save').forEach(i => {
+                if (draft[i.id] !== undefined) {
+                    if (i.type === 'checkbox') i.checked = draft[i.id];
+                    else i.value = draft[i.id];
+                }
+            });
+            calculateDefectRate('in');
+            let alertEl = document.getElementById('draft-alert');
+            if(alertEl) alertEl.classList.remove('d-none');
+            if(Object.keys(draft).length > 0) isFormDirty = true; 
+        }
+        let m = document.getElementById('addRecordModal');
+        if(m) bootstrap.Modal.getOrCreateInstance(m).show(); 
+    }
+    
+    function closeAddModal() { 
+        let m = document.getElementById('addRecordModal');
+        if(m) bootstrap.Modal.getOrCreateInstance(m).hide(); 
+    }
+
+    function initLazyDefaults() {
+        let t = document.getElementById('inTime'); if(t) t.value = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16);
+        // --- 【智慧上下文記憶】 ---
+        if(localStorage.getItem('lazy_site') && document.getElementById('inSite')) document.getElementById('inSite').value = localStorage.getItem('lazy_site');
+        if(localStorage.getItem('lazy_area') && document.getElementById('inArea')) document.getElementById('inArea').value = localStorage.getItem('lazy_area');
+        if(localStorage.getItem('lazy_iqcDRI') && document.getElementById('inIqcDRI')) document.getElementById('inIqcDRI').value = localStorage.getItem('lazy_iqcDRI');
+        if(localStorage.getItem('lazy_model') && document.getElementById('inModel')) document.getElementById('inModel').value = localStorage.getItem('lazy_model');
+        if(localStorage.getItem('lazy_stage') && document.getElementById('inStage')) document.getElementById('inStage').value = localStorage.getItem('lazy_stage');
+    }
+
+    function fillLazyTestData() {
+        let r = Math.floor(Math.random() * 900) + 100;
+        document.getElementById('inModel').value='J81a'; document.getElementById('inStage').value='PVT'; document.getElementById('inVendor').value='LITEON'; document.getElementById('inQPN').value='TEST-'+r; document.getElementById('inParts').value='IC'; document.getElementById('inSN').value='SN-'+r; document.getElementById('inFailStation').value='FATP'; document.getElementById('inRadar').value='123'+r; document.getElementById('inDescLine').value='System boot fail'; document.getElementById('inDescIQC').value='IC burned'; 
+        
+        document.getElementById('inT0Result').value='Fail'; 
+        document.getElementById('inDefectF').value='1'; 
+        document.getElementById('inDefectT').value='50'; 
+        calculateDefectRate('in');
+        
+        document.getElementById('inRev').value='Tom FAE'; document.getElementById('resAppearance').value='NG'; document.getElementById('resDimension').value='OK'; document.getElementById('resFunction').value='Fail';
+        isFormDirty = true;
+        showToast('💡 測試資料', '自動填入成功 (Filled).', 2000); openAddModal();
+    }
+
+    function formatBadge(val) {
+        if(!val) return '-';
+        if(val === 'Pass' || val === 'OK') return `<span class="badge-enterprise bg-pass">${val}</span>`;
+        if(val === 'Fail' || val === 'NG' || val === 'OOS') return `<span class="badge-enterprise bg-fail">${val}</span>`;
+        if(val === 'Intermittent') return `<span class="badge-enterprise bg-intermittent">Intermittent</span>`;
+        if(val === 'NA' || val === 'Not Test') return `<span class="badge-enterprise bg-pending">${val}</span>`;
+        return `<span class="badge-enterprise bg-pending">${val}</span>`;
+    }
+
+    function applyFilters() {
+        let fRes = document.getElementById('filterResult').value;
+        let fProg = document.getElementById('filterProgress').value;
+        let search = document.getElementById('searchInput').value.toLowerCase();
+        let sDate = document.getElementById('filterStartDate').value;
+        let eDate = document.getElementById('filterEndDate').value;
+
+        let filtered = db.filter(item => {
+            // 身分過濾
+            if(currentUserRole !== 'SuperAdmin' && currentUserRole !== 'Engineer' && item.vendor !== currentUserRole) return false;
+            // 狀態過濾
+            if(fRes !== 'All' && item.t0Result !== fRes) return false;
+            
+            let isClosed = (item.rtv === 'Yes' && item.rtvType && item.step >= (item.rtvType==='Cargo'?stepsCargo.length:stepsCourier.length));
+            if(fProg === 'Not Started' && item.rtv === 'Yes') return false; 
+            if(fProg === 'In Progress' && (item.rtv !== 'Yes' || isClosed)) return false;
+            if(fProg === 'Closed' && !isClosed) return false; 
+            
+            // 搜尋過濾
+            if(search && !(item.model+item.qpn+item.sn+item.vendor).toLowerCase().includes(search)) return false;
+            
+            // --- 【日期區間過濾】 ---
+            if(item.occurTime) {
+                let itemDate = item.occurTime.split('T')[0];
+                if(sDate && itemDate < sDate) return false;
+                if(eDate && itemDate > eDate) return false;
+            }
+
+            return true;
+        });
+
+        setElText('countAll', filtered.length);
+        setElText('countInProgress', filtered.filter(d => d.rtv === 'Yes' && (!d.rtvType || d.step < (d.rtvType==='Cargo'?6:7))).length);
+        setElText('countOverdue', filtered.filter(d => Math.floor((new Date() - new Date(d.createdAt))/(86400000)) > 7).length);
+
+        currentView === 'list' ? renderListTable(filtered) : renderBatchTable(filtered);
+        updateDRIReminder();
+    }
+
+    function toggleView(mode) {
+        currentView = mode; 
+        let la = document.getElementById('listActions'); if(la) la.style.visibility = (mode === 'list' ? 'visible' : 'hidden');
+        let mt = document.getElementById('mainTable'); if(mt) mt.className = mode === 'list' ? 'table table-enterprise table-hover align-middle table-list-view' : 'table table-enterprise table-hover align-middle'; 
+        applyFilters();
+    }
+
+    function renderListTable(data) {
+        let thead = `<tr>
+            <th class="sticky-col-1"><input type="checkbox" id="checkAll" onclick="toggleAll()"></th>
+            <th class="sticky-col-2">廠區 (Factory)</th><th class="sticky-col-3">料號 (QPN)</th><th class="sticky-col-4">材料 (Parts)</th><th class="sticky-col-5">序號 (SN)</th><th class="sticky-col-6">階段 (Stage)</th>
+            <th>T0 / T1 結果</th><th>物流進度 (Logistics Progress)</th><th>RTV 狀態 (Status)</th>
+            <th>滯留 (DDD)</th><th>操作管理 (Actions)</th>
+            <th>地區 (Site)</th><th>日期 (Date)</th><th>機種 (Model)</th><th>IQC (DRI)</th><th>廠商 (Vendor)</th>
+            <th>不良站點 (Station)</th><th>Radar://</th><th>不良率 (Defect%)</th><th>復判 (Rev.)</th>
+            <th>外觀 (Cos.)</th><th>尺寸 (Dim.)</th><th>功能 (Func.)</th><th>產線描述 (Line)</th><th>IQC描述 (IQC)</th><th>圖片 (Img)</th>
+        </tr>`;
+        let thEl = document.getElementById('tableHead'); if(thEl) thEl.innerHTML = thead; 
+        let tbody = document.getElementById('tableBody'); if(tbody) tbody.innerHTML = ''; else return;
+        
+        data.forEach(item => {
+            let pIcon = item.priority ? `<i class="fas fa-exclamation-circle priority-high"></i> ` : '';
+            let ddd = Math.floor((new Date() - new Date(item.createdAt))/(86400000));
+            let dddCls = ddd > 7 ? 'ddd-overdue' : (ddd > 3 ? 'ddd-warning' : 'ddd-normal');
+            
+            let progressHtml = '<span class="text-muted small">未啟動 (Not Started)</span>';
+            if (item.rtv === 'Yes') {
+                if (!item.rtvType) {
+                    progressHtml = `<button class="btn btn-xs btn-outline-primary py-0 px-2 rounded-pill" style="font-size:0.7rem;" onclick="openRTVModal(${item.id})">選擇物流方式</button>`;
+                } else {
+                    let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
+                    let isClosed = item.step >= sArr.length;
+                    let stepText = isClosed ? '已結案 (Closed)' : sArr[item.step];
+                    let pct = (item.step / (sArr.length - 1)) * 100;
+                    let color = isClosed ? 'bg-success' : 'bg-primary';
+                    let nextActionBtn = isClosed ? '' : `<button class="btn btn-sm btn-link text-success p-0 ms-2" onclick="quickNextStep(${item.id})" title="推進至: ${stepText}"><i class="fas fa-forward"></i></button>`;
+
+                    progressHtml = `
+                    <div class="d-flex flex-column" style="width: 150px;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-light text-dark border border-secondary" style="font-size:0.65rem;">${item.rtvType}</span>
+                            ${nextActionBtn}
+                        </div>
+                        <div class="progress shadow-sm" style="height: 6px;">
+                            <div class="progress-bar ${color}" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="small text-muted mt-1" style="font-size:0.7rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${stepText}">${stepText}</div>
+                    </div>`;
+                }
+            }
+
+            let rtvSelect = `<select class="form-select form-select-sm border-0 bg-transparent py-0 text-primary fw-bold" style="width: 90px;" onchange="updateRTVStatus(${item.id}, this.value)"><option value="Yes" ${item.rtv === 'Yes' ? 'selected' : ''}>Yes</option><option value="Pending" ${item.rtv === 'Pending' ? 'selected' : ''}>Pending</option><option value="No" ${item.rtv === 'No' ? 'selected' : ''}>No</option></select>`;
+            let imgIcon = item.hasImg ? '<i class="fas fa-image text-success" title="Contains Image"></i>' : '-';
+            
+            let actionBtns = `
+                <button class="btn btn-sm btn-light border text-primary shadow-sm" onclick="openRTVModal(${item.id})" ${item.rtv!=='Yes'?'disabled':''} title="詳細物流視窗"><i class="fas fa-search-location"></i></button>
+                <button class="btn btn-sm btn-warning text-dark border shadow-sm ms-1" onclick="openQuickTrack(${item.id})" ${item.rtv!=='Yes'?'disabled':''} title="閃電預覽面板"><i class="fas fa-bolt"></i></button>
+                ${currentUserRole==='SuperAdmin' ? `<button class="btn btn-sm btn-light border text-warning ms-1 shadow-sm" onclick="openEditModal(${item.id})"><i class="fas fa-edit"></i></button>` : ''}
+            `;
+
+            let tResultHtml = `T0: ${formatBadge(item.t0Result)}`;
+            if (item.t1Result) tResultHtml += `<br>T1: ${formatBadge(item.t1Result)}`;
+
+            tbody.innerHTML += `<tr>
+                <td class="sticky-col-1"><input type="checkbox" class="row-cb form-check-input" value="${item.id}" onchange="handleRowCheck()"></td>
+                <td class="sticky-col-2 fw-medium">${item.area}</td><td class="sticky-col-3">${pIcon}<b class="text-main">${item.qpn}</b></td>
+                <td class="sticky-col-4">${item.parts}</td><td class="sticky-col-5 sn-hover fw-bold text-primary" onmouseenter="showHUD(event, ${item.id})" onmouseleave="hideHUD()">${item.sn}</td><td class="sticky-col-6">${item.stage}</td>
+                <td>${tResultHtml}</td><td>${progressHtml}</td><td>${rtvSelect}</td><td class="${dddCls} fw-bold">${ddd}d</td>
+                <td style="min-width: 140px;">${actionBtns}</td>
+                <td>${item.site}</td><td>${item.occurTime.split('T')[0]}</td><td>${item.model}</td><td>${item.iqcDRI}</td><td class="fw-bold">${item.vendor}</td>
+            <td>${item.failStation}</td>
+            <td><span class="badge-radar" onclick="copyRadar('${item.radar}')" title="點擊複製"><i class="fas fa-link"></i>Radar://${item.radar}</span></td>
+            <td class="fw-bold text-primary">${item.defectRate || '-'}</td><td>${item.rev}</td>
+                <td>${formatBadge(item.resApp)}</td><td>${formatBadge(item.resDim)}</td><td>${formatBadge(item.resFunc)}</td>
+                <td class="text-dark small" style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${item.descLine}</td>
+                <td class="text-danger small" style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${item.descIQC}</td>
+                <td class="text-center">${imgIcon}</td>
+            </tr>`;
+        });
+    }
+
+    function renderBatchTable(data) {
+        let thEl = document.getElementById('tableHead'); 
+        if(thEl) thEl.innerHTML = `<tr><th width="30"></th><th>批次 (Batch)</th><th>廠商 (Vendor)</th><th>數量 (Qty)</th><th>物流 (Mode)</th><th>進度 (Progress)</th><th>操作 (Action)</th></tr>`;
+        let tbody = document.getElementById('tableBody'); if(tbody) tbody.innerHTML = ''; else return;
+        let batches = {}; data.forEach(d => { if(d.rtv !== 'Yes') return; let k = d.rtvBatchId || d.trackingNo || '未群組 (Unbatched)'; if(!batches[k]) batches[k] = []; batches[k].push(d); });
+        Object.keys(batches).forEach((k, idx) => {
+            let grp = batches[k], f = grp[0]; let steps = f.rtvType==='Cargo'?stepsCargo:stepsCourier; let pct = (f.step/(steps.length)*100); let progText = f.step >= steps.length ? '已結案' : (steps[f.step] || 'Completed'); let color = f.step >= steps.length ? 'bg-success' : 'bg-primary';
+            let tr = `<tr class="bg-light fw-bold" style="cursor:pointer;" onclick="toggleBatchRow('bt-${idx}')"><td><i class="fas fa-chevron-right text-muted" id="icon-${idx}"></i></td><td class="text-primary"><i class="fas fa-cubes me-2"></i> ${k}</td><td>${f.vendor}</td><td><span class="badge bg-secondary">${grp.length}</span></td><td>${f.rtvType||'-'}</td><td><div class="progress" style="height:6px; width:100px; display:inline-flex;"><div class="progress-bar ${color}" style="width:${pct}%"></div></div><span class="small ms-2 text-muted">${progText}</span></td><td><button class="btn btn-sm btn-primary py-0" onclick="event.stopPropagation(); openRTVModal(${f.id})">詳情 (Details)</button></td></tr>`;
+            let childRows = grp.map(g => `<tr><td></td><td colspan="5" class="small bg-white ps-4 border-bottom"><span class="text-muted">SN:</span> <b>${g.sn}</b> <span class="mx-2 text-muted">|</span> QPN: ${g.qpn} <span class="mx-2 text-muted">|</span> Model: ${g.model}</td><td class="bg-white border-bottom"><button class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.7rem;" onclick="removeFromBatch(${g.id})" title="移除"><i class="fas fa-unlink"></i></button></td></tr>`).join('');
+            tbody.innerHTML += tr + `<tbody id="bt-${idx}" style="display:none;">${childRows}</tbody>`;
+        });
+    }
+
+    function toggleBatchRow(id) { let el = document.getElementById(id), icon = document.getElementById(id.replace('bt-', 'icon-')); if (el.style.display === 'none') { el.style.display = 'table-row-group'; icon.className = 'fas fa-chevron-down text-primary'; } else { el.style.display = 'none'; icon.className = 'fas fa-chevron-right text-muted'; } }
+
+    function renderKanban() {
+        ['kb-col-0','kb-col-1','kb-col-2','kb-col-3'].forEach(id => { let el=document.getElementById(id); if(el) el.innerHTML=''; });
+        let counts = [0, 0, 0, 0];
+
+        db.filter(d => {
+            if(d.rtv !== 'Yes') return false;
+            if(currentUserRole !== 'SuperAdmin' && currentUserRole !== 'Engineer' && d.vendor !== currentUserRole) return false;
+            return true;
+        }).forEach(item => {
+            let colIdx = 0; 
+            let sArr = [];
+            if (item.rtvType) {
+                sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
+                let stepName = sArr[item.step];
+                if (item.step >= sArr.length) colIdx = 3; 
+                else if (stepName && stepName.includes('FA')) colIdx = 2; 
+                else if (item.step > 0) colIdx = 1; 
+            }
+
+            counts[colIdx]++;
+            let pIcon = item.priority ? `<i class="fas fa-fire text-danger" title="High Priority"></i> ` : '';
+            
+            // Highlight cards waiting for current user
+            let isMyTurn = false;
+            if (item.rtvType && item.step < sArr.length) {
+                let dri = getDRI(item.step, item.rtvType);
+                if (currentUserRole === 'SuperAdmin' && (dri === 'IQC' || dri === 'SQE' || dri === 'IQC>>SQE')) isMyTurn = true;
+                // 修正：Kanban 卡片高亮也要對齊 SQE 標籤
+                else if (currentUserRole === 'Engineer' && dri.includes('SQE')) isMyTurn = true;
+            }
+            let borderStyle = isMyTurn ? `border: 2px solid #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.3);` : `border-left: 4px solid var(--brand-secondary);`;
+
+            let nextActionBtn = '';
+            if (colIdx < 3 && item.rtvType) {
+                let nextName = sArr[item.step];
+                nextActionBtn = `<button class="btn btn-sm btn-success py-0 px-2 shadow-sm k-card-action" onclick="event.stopPropagation(); quickNextStep(${item.id})" title="推進至: ${nextName}"><i class="fas fa-forward"></i></button>`;
+            } else if (colIdx === 0 && !item.rtvType) {
+                nextActionBtn = `<button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm k-card-action" onclick="event.stopPropagation(); openRTVModal(${item.id})">選物流</button>`;
+            }
+
+            let cardHtml = `
+                <div class="k-card" style="${borderStyle}" draggable="true" ondragstart="dragStart(event, ${item.id})" ondragend="dragEnd(event)" onclick="openQuickTrack(${item.id})">
+                    ${nextActionBtn}
+                    <div class="k-card-title pe-4">${pIcon}${item.qpn}</div>
+                    <div class="mb-2"><span class="badge bg-light text-dark border border-secondary">${item.vendor}</span></div>
+                    <div class="k-card-desc mb-1"><i class="fas fa-barcode text-muted"></i> SN: <span class="fw-bold text-dark">${item.sn}</span></div>
+                    <div class="k-card-desc text-danger mb-0" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><i class="fas fa-exclamation-circle text-muted"></i> ${item.descIQC}</div>
+                </div>
+            `;
+            let col = document.getElementById('kb-col-' + colIdx);
+            if(col) col.innerHTML += cardHtml;
+        });
+
+        for(let i=0; i<4; i++) setElText('kb-count-'+i, counts[i]);
+        updateDRIReminder();
+    }
+
+    function dragStart(ev, id) {
+        ev.dataTransfer.setData("text/plain", id);
+        setTimeout(() => ev.target.classList.add('dragging'), 0);
+    }
+    function dragEnd(ev) {
+        ev.target.classList.remove('dragging');
+        document.querySelectorAll('.kanban-col').forEach(col => col.classList.remove('drag-over'));
+    }
+    function allowDrop(ev) {
+        ev.preventDefault();
+        let targetCol = ev.target.closest('.kanban-col');
+        if(targetCol) targetCol.classList.add('drag-over');
+    }
+    function drop(ev, targetColIdx) {
+        ev.preventDefault();
+        document.querySelectorAll('.kanban-col').forEach(col => col.classList.remove('drag-over'));
+        let id = parseInt(ev.dataTransfer.getData("text/plain"));
+        if(!id) return;
+        let item = db.find(d => d.id === id);
+        if(!item) return;
+
+        if (!item.rtvType) return showToast("無法拖曳", "請先設定物流方式 (Select Mode First)。", 3000);
+
+        let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
+        let currentColIdx = 0;
+        if (item.step >= sArr.length) currentColIdx = 3; 
+        else if (sArr[item.step].includes('FA')) currentColIdx = 2; 
+        else if (item.step > 0) currentColIdx = 1;
+
+        if (targetColIdx > currentColIdx) {
+            let targetStep = item.step;
+            if (targetColIdx === 1) targetStep = 2; 
+            else if (targetColIdx === 2) targetStep = item.rtvType === 'Courier' ? 5 : 4; 
+            else if (targetColIdx === 3) targetStep = sArr.length; 
+
+            if (item.rtvType === 'Courier' && item.step <= 3 && targetStep > 3 && (!item.trackingNo || item.trackingNo.trim() === '')) {
+                let trackVal = prompt(`[防呆檢查] 跨越快遞階段，請輸入快遞單號 (預設順豐，留空填入 AUTO 自動生成):`);
+                if(trackVal === null) return; 
+                if(trackVal.trim() === '' || trackVal.toUpperCase() === 'AUTO') trackVal = 'AUTO-' + Date.now().toString().slice(-6); 
+                item.trackingNo = trackVal;
+                item.courierComp = item.courierComp || '順豐';
+            }
+
+            let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            let timeStr = now.toISOString().slice(0,16);
+            
+            for(let i = item.step; i < targetStep; i++) {
+                if (!item.timestamps[i]) item.timestamps[i] = timeStr;
+                if (sArr[i].includes('已抵達')) {
+                    item.ata = timeStr.split('T')[0];
+                    if(item.eta && item.ata > item.eta) item.delayStatus = 'Delayed'; else item.delayStatus = 'On Time';
+                }
+            }
+            
+            item.step = targetStep;
+            let stepName = targetStep >= sArr.length ? "已結案" : sArr[targetStep-1];
+            addLog(item, currentUserRole, `[拖拉推進] 直接移動至: ${stepName}`);
+            
+            saveDB();
+            renderKanban();
+            applyFilters();
+            showToast("推進成功", `已成功移動卡片至新區域！`);
+        } else if (targetColIdx === currentColIdx) {
+             // Do nothing
+        } else {
+            showToast("提示", "目前不支援倒退拖曳或無效的跨區拖曳。");
+        }
+    }
+
+    function advanceColumn(colIdx) {
+        let itemsInCol = db.filter(item => {
+            if(item.rtv !== 'Yes' || !item.rtvType) return false;
+            let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
+            let cIdx = 0;
+            if (item.step >= sArr.length) cIdx = 3; 
+            else if (sArr[item.step].includes('FA')) cIdx = 2; 
+            else if (item.step > 0) cIdx = 1;
+            return cIdx === colIdx;
+        });
+
+        if(itemsInCol.length === 0) return showToast("提示", "此欄位目前沒有可推進的資料。");
+        if(!confirm(`確定要將此欄位的 ${itemsInCol.length} 筆資料批量推往下一個進度嗎？`)) return;
+
+        let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        let timeStr = now.toISOString().slice(0,16);
+
+        itemsInCol.forEach(item => {
+            let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
+            if(item.step >= sArr.length) return;
+            
+            let nextName = sArr[item.step];
+            if (item.rtvType === 'Courier' && nextName.includes('快遞單號') && !item.trackingNo) {
+                 item.trackingNo = 'AUTO-' + Date.now().toString().slice(-6);
+                 item.courierComp = item.courierComp || '順豐';
+            }
+
+            if(!item.timestamps) item.timestamps = [];
+            item.timestamps[item.step] = timeStr;
+            
+            if(nextName.includes('已抵達')) {
+                item.ata = timeStr.split('T')[0];
+                if(item.eta && item.ata > item.eta) item.delayStatus = 'Delayed'; else item.delayStatus = 'On Time';
+            }
+
+            item.step++;
+            addLog(item, currentUserRole, `[欄位批量推進] 完成: ${nextName}`);
+        });
+
+        saveDB();
+        renderKanban();
+        showToast("批量成功", `已成功推進 ${itemsInCol.length} 筆資料！`);
+    }
+
+    // --- 【Dashboard 擴充：加入 Model, Material, Monthly, Yearly】 ---
+    function renderCharts() {
+        // Clear all canvases
+        ['chartDDD', 'chartVendor', 'chartModel', 'chartMaterial', 'chartMonthly', 'chartYearly', 'chartStation'].forEach(id => { 
+            if(charts[id]) charts[id].destroy(); 
+        });
+
+        // 1. DDD Distribution
+        let dddGroups = { '<3 Days': 0, '3-7 Days': 0, '>7 Days (Overdue)': 0 };
+        db.forEach(d => { let ddd = Math.floor((new Date() - new Date(d.createdAt))/(86400000)); if(ddd <= 3) dddGroups['<3 Days']++; else if(ddd <= 7) dddGroups['3-7 Days']++; else dddGroups['>7 Days (Overdue)']++; });
+        let cddd = document.getElementById('chartDDD');
+        if(cddd) charts['chartDDD'] = new Chart(cddd, { type: 'bar', data: { labels: Object.keys(dddGroups), datasets: [{ label: 'Cases', data: Object.values(dddGroups), backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+
+        // 2. Vendor Defect Rate
+        let vData = {}; db.forEach(d => { vData[d.vendor] = (vData[d.vendor]||0) + 1; });
+        let cven = document.getElementById('chartVendor');
+        if(cven) charts['chartVendor'] = new Chart(cven, { type: 'doughnut', data: { labels: Object.keys(vData), datasets: [{ data: Object.values(vData), backgroundColor: ['#4f46e5', '#0ea5e9', '#f43f5e'] }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '65%' } });
+
+        // 3. Model Distribution (New)
+        let mData = {}; db.forEach(d => { if(d.model) mData[d.model] = (mData[d.model]||0) + 1; });
+        let cmod = document.getElementById('chartModel');
+        if(cmod) charts['chartModel'] = new Chart(cmod, { type: 'pie', data: { labels: Object.keys(mData), datasets: [{ data: Object.values(mData), backgroundColor: ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+
+        // 4. Material Breakdown (New)
+        let matData = {}; db.forEach(d => { if(d.parts) matData[d.parts] = (matData[d.parts]||0) + 1; });
+        let cmat = document.getElementById('chartMaterial');
+        if(cmat) charts['chartMaterial'] = new Chart(cmat, { type: 'doughnut', data: { labels: Object.keys(matData), datasets: [{ data: Object.values(matData), backgroundColor: ['#ec4899', '#f97316', '#14b8a6', '#6366f1'] }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '50%' } });
+
+        // 5. Fail Station
+        let sData = {}; db.forEach(d => { if(d.failStation) sData[d.failStation] = (sData[d.failStation]||0) + 1; });
+        let csta = document.getElementById('chartStation');
+        if(csta) charts['chartStation'] = new Chart(csta, { type: 'polarArea', data: { labels: Object.keys(sData), datasets: [{ data: Object.values(sData), backgroundColor: ['rgba(239,68,68,0.7)', 'rgba(59,130,246,0.7)', 'rgba(245,158,11,0.7)', 'rgba(168,85,247,0.7)'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+
+        // 6. Monthly Count (New)
+        let monthData = {}; 
+        db.forEach(d => { 
+            if(!d.occurTime) return;
+            let m = d.occurTime.substring(0, 7); // YYYY-MM
+            monthData[m] = (monthData[m]||0) + 1; 
+        });
+        let sortedMonths = Object.keys(monthData).sort();
+        let cmonth = document.getElementById('chartMonthly');
+        if(cmonth) charts['chartMonthly'] = new Chart(cmonth, { type: 'bar', data: { labels: sortedMonths, datasets: [{ label: '異常數量', data: sortedMonths.map(k=>monthData[k]), backgroundColor: '#3b82f6', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+
+        // 7. Yearly Count (New)
+        let yearData = {}; 
+        db.forEach(d => { 
+            if(!d.occurTime) return;
+            let y = d.occurTime.substring(0, 4); // YYYY
+            yearData[y] = (yearData[y]||0) + 1; 
+        });
+        let sortedYears = Object.keys(yearData).sort();
+        let cyear = document.getElementById('chartYearly');
+        if(cyear) charts['chartYearly'] = new Chart(cyear, { type: 'bar', data: { labels: sortedYears, datasets: [{ label: '異常數量', data: sortedYears.map(k=>yearData[k]), backgroundColor: '#10b981', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+    }
+
+    function addNewRecord() {
+        let reqFields = document.querySelectorAll('.req-field'); let isValid = true;
+        reqFields.forEach(el => { if(!el.value.trim()) { el.classList.add('is-invalid'); isValid = false; } else { el.classList.remove('is-invalid'); } });
+        if(!isValid) return showToast("驗證錯誤", "請填寫所有必填欄位 (Please fill all required fields).", 3000);
+        
+        let snInput = document.getElementById('inSN').value;
+        if(db.some(d => d.sn.toLowerCase() === snInput.toLowerCase() && d.step < 6)) {
+            return showToast("錯誤 (Error)", `此序號 ${snInput} 已經存在且尚未結案！`, 4000);
+        }
+
+        // --- 【儲存智慧記憶上下文】 ---
+        let inSite = document.getElementById('inSite'); if(inSite) localStorage.setItem('lazy_site', inSite.value); 
+        let inArea = document.getElementById('inArea'); if(inArea) localStorage.setItem('lazy_area', inArea.value); 
+        let inIqcDRI = document.getElementById('inIqcDRI'); if(inIqcDRI) localStorage.setItem('lazy_iqcDRI', inIqcDRI.value);
+        let inModel = document.getElementById('inModel'); if(inModel) localStorage.setItem('lazy_model', inModel.value);
+        let inStage = document.getElementById('inStage'); if(inStage) localStorage.setItem('lazy_stage', inStage.value);
+        
+        // 抓取 F 與 T 並組合不良率字串
+        let fVal = document.getElementById('inDefectF') ? document.getElementById('inDefectF').value : '';
+        let tVal = document.getElementById('inDefectT') ? document.getElementById('inDefectT').value : '';
+        let pctStr = document.getElementById('inDefectDisplay') ? document.getElementById('inDefectDisplay').innerText : '-%';
+        let defectRateFinal = (fVal !== '' && tVal !== '') ? `${fVal}F/${tVal}T=${pctStr}` : '';
+
+        let newItem = {
+            id: Date.now(), 
+            priority: document.getElementById('inPriority') ? document.getElementById('inPriority').checked : false, 
+            site: inSite ? inSite.value : '', 
+            occurTime: document.getElementById('inTime') ? document.getElementById('inTime').value : '', 
+            area: inArea ? inArea.value : '', 
+            model: document.getElementById('inModel') ? document.getElementById('inModel').value : '', 
+            stage: document.getElementById('inStage') ? document.getElementById('inStage').value : '', 
+            iqcDRI: inIqcDRI ? inIqcDRI.value : '', 
+            vendor: document.getElementById('inVendor') ? document.getElementById('inVendor').value : '', 
+            qpn: document.getElementById('inQPN') ? document.getElementById('inQPN').value : '', 
+            parts: document.getElementById('inParts') ? document.getElementById('inParts').value : '', 
+            sn: snInput, 
+            failStation: document.getElementById('inFailStation') ? document.getElementById('inFailStation').value : '', 
+            radar: document.getElementById('inRadar') ? document.getElementById('inRadar').value : '', 
+            descLine: document.getElementById('inDescLine') ? document.getElementById('inDescLine').value : '', 
+            descIQC: document.getElementById('inDescIQC') ? document.getElementById('inDescIQC').value : '', 
+            t0Result: document.getElementById('inT0Result') ? document.getElementById('inT0Result').value : '', 
+            t1Result: document.getElementById('inT1Result') ? document.getElementById('inT1Result').value : '', 
+            defectRate: defectRateFinal, 
+            rev: document.getElementById('inRev') ? document.getElementById('inRev').value : '', 
+            resApp: document.getElementById('resAppearance') ? document.getElementById('resAppearance').value : '', 
+            resDim: document.getElementById('resDimension') ? document.getElementById('resDimension').value : '', 
+            resFunc: document.getElementById('resFunction') ? document.getElementById('resFunction').value : '', 
+            hasImg: hasImgFlag, 
+            rtv: 'No', rtvBatchId: null, rtvType: '', courierComp: '', trackingNo: '', step: 0, cargoSubStep: '', eta: '', ata: '', delayStatus: '', timestamps: [], createdAt: new Date().toISOString().split('T')[0], logs: [], comments: []
+        };
+        addLog(newItem, currentUserRole, "建立新紀錄 (Created)"); db.unshift(newItem); 
+        
+        saveDB(); 
+        applyFilters(); 
+        
+        localStorage.removeItem('rtv_draft');
+        isFormDirty = false;
+        pastedImages = { line: false, iqc: false };
+        let alertEl = document.getElementById('draft-alert');
+        if(alertEl) alertEl.classList.add('d-none');
+        document.getElementById('paste-preview-line').innerText = '';
+        document.getElementById('paste-preview-iqc').innerText = '';
+        document.getElementById('inDefectDisplay').innerText = '-%'; // reset display
+        
+        showToast("成功 (Success)", "紀錄已儲存 (Saved)."); 
+        let formEl = document.getElementById('addRecordForm');
+        if(formEl) formEl.reset(); 
+        initLazyDefaults(); closeAddModal();
+    }
+
+    function autoFillByQPN(qpn) { 
+        if(!qpn) return; 
+        let found = db.find(d => d.qpn.toLowerCase() === qpn.toLowerCase()); 
+        if(found) { 
+            let v = document.getElementById('inVendor'); if(v) v.value = found.vendor; 
+            let p = document.getElementById('inParts'); if(p) p.value = found.parts; 
+        } 
+    }
+
+    // --- 【Zalo/Teams 一鍵摘要分享】 ---
+    window.copyShareSummary = function(id) {
+        let item = db.find(d => d.id === id);
+        if(!item) return;
+        
+        let dateStr = item.occurTime ? item.occurTime.split('T')[0] : '';
+        
+        let text = `日期: ${dateStr}\n` +
+                   `機種: ${item.model || '-'}\n` +
+                   `廠區: ${item.area || '-'}\n` +
+                   `材料: ${item.parts || '-'}\n` +
+                   `QPN: ${item.qpn || '-'}\n` +
+                   `SN: ${item.sn || '-'}\n` +
+                   `不良站點: ${item.failStation || '-'}\n` +
+                   `不良率: ${item.defectRate || '-'}\n` +
+                   `外觀/尺寸/功能: ${item.resApp || '-'}/${item.resDim || '-'}/${item.resFunc || '-'}\n` +
+                   `T0/T1結果: ${item.t0Result || '-'}/${item.t1Result || '-'}\n` +
+                   `不良描述: ${item.descIQC || '-'}\n` +
+                   `Radar: Radar://${item.radar || '-'}`;
+                   
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.setAttribute('readonly', '');
+        el.style.position = 'absolute';
+        el.style.left = '-9999px';
+        
+        // 將 textarea 附加到當前的 offcanvas 內，避免 Bootstrap 焦點鎖定機制干擾導致複製到全網頁 HTML
+        let container = document.getElementById('quickTrackOffcanvas');
+        if (!container) container = document.body;
+        
+        container.appendChild(el);
+        el.select(); // 移除 el.focus()，直接選取文字
+        el.setSelectionRange(0, 99999); 
+        document.execCommand('copy');
+        container.removeChild(el);
+        
+        showToast("複製成功", "摘要已複製到剪貼簿，可直接貼至 Zalo / Teams 回報！", 3000);
+    }
+
+    function openQuickTrack(id) {
+        let item = db.find(d => d.id === id);
+        if(!item) return;
+
+        let qtInfo = document.getElementById('qt-info');
+        if(qtInfo) {
+            qtInfo.innerHTML = `
+                <div class="small text-muted mb-1">料號 / 機種 (QPN / Model)</div>
+                <div class="fw-bold text-primary fs-6 mb-2">${item.qpn} <span class="badge bg-light text-dark border ms-1">${item.model}</span></div>
+                <div class="small text-muted mb-1">序號 (SN)</div>
+                <div class="fw-bold text-dark mb-2">${item.sn} ${item.rtvBatchId ? '<span class="badge bg-info text-dark ms-1">已批次</span>' : ''}</div>
+                <div class="small text-muted mb-1">物流 (Mode)</div>
+                <div class="fw-bold text-dark">${item.rtvType || '<span class="text-danger">尚未設定</span>'}</div>
+            `;
+        }
+
+        let qtTl = document.getElementById('qt-timeline');
+        let actionBox = document.getElementById('qt-action');
+        let shareBtn = `<button class="btn btn-outline-primary w-100 fw-bold shadow-sm py-2 mt-2" onclick="copyShareSummary(${item.id})"><i class="fas fa-copy me-2"></i> 複製摘要 (Copy Summary)</button>`;
+
+        if(!item.rtvType) {
+            if(qtTl) qtTl.innerHTML = '<div class="text-center text-muted my-5"><i class="fas fa-exclamation-circle fa-3x mb-3 text-warning"></i><br>請先進入詳細視窗設定物流方式</div>';
+            if(actionBox) actionBox.innerHTML = shareBtn;
+        } else {
+            let names = item.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
+            let html = '<div class="qt-timeline-line"></div>';
+
+            names.forEach((n, i) => {
+                let isDone = i < item.step; let isActive = i === item.step;
+                let statusClass = isDone ? 'done' : (isActive ? 'active' : '');
+                let timeStr = (item.timestamps && item.timestamps[i]) ? item.timestamps[i].replace('T', ' ') : '-';
+                let trackInfo = (item.rtvType === 'Courier' && n.includes('快遞單號') && item.trackingNo) ? `<div class="mt-1"><span class="badge bg-success"><i class="fas fa-barcode"></i> [${item.courierComp || '順豐'}] ${item.trackingNo}</span></div>` : '';
+                let subStepInfo = (item.rtvType === 'Cargo' && i === 0 && item.cargoSubStep) ? `<div class="text-primary mt-1" style="font-size:0.7rem; font-weight:bold;">↳ ${item.cargoSubStep}</div>` : '';
+
+                // --- 【DRI 顯示邏輯】 ---
+                let dri = getDRI(i, item.rtvType);
+                let driHtml = '';
+                if (dri === 'IQC>>SQE') {
+                    driHtml = `<div class="mt-1"><span class="badge rounded-pill bg-info text-dark border shadow-sm" style="font-size:0.65rem; padding: 2px 6px;">IQC <i class="fas fa-angle-double-right text-secondary mx-1"></i> SQE</span></div>`;
+                } else {
+                    let driClass = dri === 'IQC' ? 'bg-info text-dark' : (dri === 'SQE' ? 'bg-warning text-dark' : 'bg-primary text-white');
+                    driHtml = `<div class="mt-1"><span class="badge rounded-pill ${driClass} border shadow-sm" style="font-size:0.65rem; padding: 2px 6px;">${dri}</span></div>`;
+                }
+
+                html += `
+                <div class="qt-node ${statusClass}">
+                    <div class="qt-dot"></div>
+                    <div class="fw-bold text-dark ${isActive?'text-warning':''}">${n}</div>
+                    ${subStepInfo}
+                    <div class="small text-muted" style="font-size:0.7rem;">${timeStr}</div>
+                    ${driHtml}
+                    ${trackInfo}
+                </div>`;
+            });
+            
+            if(qtTl) qtTl.innerHTML = html;
+
+            if(actionBox) {
+                if (item.step < names.length) {
+                    actionBox.innerHTML = `<button class="btn btn-brand w-100 fw-bold shadow-sm py-2" onclick="quickNextStep(${item.id})"><i class="fas fa-forward me-2"></i>一鍵推進 (Quick Next): ${names[item.step]}</button>` + shareBtn;
+                } else {
+                    actionBox.innerHTML = `<button class="btn btn-success w-100 fw-bold disabled py-2"><i class="fas fa-check-circle me-2"></i>已全部完成 (All Done)</button>` + shareBtn;
+                }
+            }
+        }
+
+        let oEl = document.getElementById('quickTrackOffcanvas');
+        if(oEl) {
+            let offcanvas = bootstrap.Offcanvas.getOrCreateInstance(oEl);
+            offcanvas.show();
+        }
+    }
+
+    window.quickNextStep = function(id) {
+        if(event) event.stopPropagation();
+        let item = db.find(d => d.id === id);
+        if(!item) return;
+        if (!item.rtvType) return showToast("提示", "請先設定物流方式。");
+
+        let names = item.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
+        if(item.step >= names.length) return;
+
+        let nextName = names[item.step], trackVal = '';
+        
+        if (item.rtvType === 'Courier' && nextName.includes('快遞單號') && !item.trackingNo) {
+             trackVal = prompt(`[防呆檢查] 請輸入快遞單號 (預設為順豐，留空填入 AUTO 自動生成):`);
+             if(trackVal === null) return; 
+             if(trackVal.trim() === '' || trackVal.toUpperCase() === 'AUTO') {
+                 trackVal = 'AUTO-' + Date.now().toString().slice(-6); 
+             }
+        }
+
+        let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        let timeStr = now.toISOString().slice(0,16);
+        let targets = item.rtvBatchId ? db.filter(d => d.rtvBatchId === item.rtvBatchId) : [item];
+        
+        targets.forEach(d => {
+            if(!d.timestamps) d.timestamps = [];
+            d.timestamps[d.step] = timeStr;
+            if(trackVal) {
+                d.trackingNo = trackVal;
+                d.courierComp = d.courierComp || '順豐';
+            }
+            d.step++;
+            if(nextName.includes('已抵達')) {
+                d.ata = timeStr.split('T')[0];
+                if(d.eta && d.ata > d.eta) d.delayStatus = 'Delayed'; else d.delayStatus = 'On Time';
+            }
+            addLog(d, currentUserRole, `[閃電推進] 完成: ${nextName}`);
+        });
+
+        saveDB(); 
+        sendMailSimulation(targets, nextName, item.step - 1); 
+        if(currentView === 'logistics') renderKanban(); else applyFilters(); 
+        
+        // 安全刷新面板，不再引發 classList null 錯誤
+        let offcanvasEl = document.getElementById('quickTrackOffcanvas');
+        if (offcanvasEl && offcanvasEl.classList && offcanvasEl.classList.contains('show')) {
+            openQuickTrack(id);
+        }
+    }
+
+    function updateETA(item) {
+        let etaDisplay = document.getElementById('m-eta-display');
+        if(!etaDisplay) return;
+        if(!item.rtvType) { etaDisplay.style.display = 'none'; return; }
+        
+        if(!item.eta) {
+            let etaConfigVal = parseInt(document.getElementById('cfg-eta') ? document.getElementById('cfg-eta').value : 7) || 7;
+            let daysToAdd = etaConfigVal;
+            let etaDate = new Date();
+            etaDate.setDate(etaDate.getDate() + daysToAdd);
+            item.eta = etaDate.toISOString().split('T')[0];
+            saveDB();
+        }
+        
+        let html = `<div class="eta-badge shadow-sm"><i class="fas fa-calendar-check me-1"></i> ETA: <span class="fw-bold ms-1 text-dark">${item.eta}</span>`;
+        if (item.ata) {
+            let delayClass = item.delayStatus === 'Delayed' ? 'bg-danger' : 'bg-success';
+            html += `<span class="mx-2 text-muted">|</span> ATA: <span class="fw-bold ms-1 text-dark">${item.ata}</span> <span class="badge ${delayClass} ms-2 shadow-sm">${item.delayStatus}</span>`;
+        }
+        html += `</div>`;
+        
+        etaDisplay.innerHTML = html;
+        etaDisplay.style.display = 'flex';
+    }
+
+    function openRTVModal(id) {
+        currentDetailId = id; let item = db.find(d => d.id === id);
+        if(!item) return;
+
+        setElText('m-qpn', item.qpn); 
+        setElText('m-model', item.model); 
+        setElText('m-descIQC', item.descIQC); 
+        setElText('m-descLine', item.descLine);
+        
+        let snListEl = document.getElementById('m-sn-list');
+        if(snListEl) {
+            let related = item.rtvBatchId ? db.filter(d=>d.rtvBatchId===item.rtvBatchId) : [item]; 
+            snListEl.innerHTML = related.map(r=>`<div><i class="fas fa-check-circle text-success me-1"></i> ${r.sn}</div>`).join('');
+        }
+        
+        let rCourier = document.getElementById('modeCourier'), rCargo = document.getElementById('modeCargo'); 
+        if(rCourier) rCourier.checked = item.rtvType==='Courier'; 
+        if(rCargo) rCargo.checked = item.rtvType==='Cargo';
+        
+        let isLocked = item.rtvType && currentUserRole !== 'SuperAdmin'; 
+        if(rCourier) rCourier.disabled = isLocked; 
+        if(rCargo) rCargo.disabled = isLocked; 
+        
+        let prevBtn = document.getElementById('btn-prev');
+        if(prevBtn) prevBtn.style.display = (currentUserRole==='SuperAdmin' && item.step > 0) ? 'inline-block' : 'none';
+        
+        let actTime = document.getElementById('actionTime');
+        if(actTime) actTime.value = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16); 
+        
+        let trkInput = document.getElementById('trackingNoInput');
+        if(trkInput) trkInput.value = item.trackingNo || '';
+        
+        let courierSelect = document.getElementById('courierCompany');
+        if(courierSelect) courierSelect.value = item.courierComp || '順豐';
+        
+        updateETA(item);
+
+        let syncBtn = document.getElementById('btn-api-sync');
+        if(syncBtn) {
+            if (item.rtvType === 'Courier' && item.step > 0 && item.step < 5 && item.trackingNo) {
+                syncBtn.style.display = 'inline-block';
+            } else {
+                syncBtn.style.display = 'none';
+            }
+        }
+        
+        let imgContainer = document.getElementById('m-images');
+        if(imgContainer) {
+            if (item.hasImg) {
+                imgContainer.innerHTML = `<div class="row g-3"><div class="col-md-6"><img src="https://placehold.co/400x250/f8fafc/64748b?text=Defect+Image+1" class="img-fluid rounded border shadow-sm w-100" alt="Defect Img"></div><div class="col-md-6"><img src="https://placehold.co/400x250/f8fafc/64748b?text=Defect+Image+2" class="img-fluid rounded border shadow-sm w-100" alt="Defect Img"></div></div>`;
+            } else {
+                imgContainer.innerHTML = `<div class="text-muted text-center py-4 bg-light rounded"><i class="fas fa-image text-secondary fs-2 mb-2 opacity-50"></i><br>無附加圖片 (No attached images)</div>`;
+            }
+        }
+
+        let collapseEl = document.getElementById('collapseImages');
+        if (collapseEl && collapseEl.classList.contains('show')) collapseEl.classList.remove('show');
+
+        renderTimelineModal(item); renderLogs(item.logs); renderComments(item.comments);
+        
+        let modalEl = document.getElementById('rtvModal');
+        if(modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    // --- Update Cargo Sub Step Logic ---
+    window.updateCargoSubStep = function() {
+        let item = db.find(d => d.id === currentDetailId);
+        if(item) {
+            let selectEl = document.getElementById('cargoSubStepInput');
+            if(selectEl) {
+                item.cargoSubStep = selectEl.value;
+                saveDB();
+                addLog(item, currentUserRole, `[Cargo] 更新 Kick Off 細項: ${item.cargoSubStep}`);
+                renderTimelineModal(item);
+                if(currentView === 'logistics') renderKanban(); else applyFilters();
+                showToast("更新成功", "退運細項進度已更新。", 2000);
+            }
+        }
+    }
+
+    function changeRTVMode(mode) { 
+        let t = db.find(d=>d.id===currentDetailId); 
+        if(!t) return;
+        if(t.rtvType && currentUserRole!=='SuperAdmin') return showToast('錯誤 (Error)','權限不足 (Permission denied).'); 
+
+        let candidates = db.filter(d => d.vendor === t.vendor && d.id !== t.id && d.rtv === 'Yes' && !d.rtvBatchId && (!d.rtvType || d.rtvType === '') );
+        
+        if (candidates.length > 0) {
+            pendingMode = mode;
+            document.getElementById('sc-vendor').innerText = t.vendor;
+            document.getElementById('sc-count').innerText = candidates.length;
+            let smodal = new bootstrap.Modal(document.getElementById('smartConsolidateModal'));
+            smodal.show();
+        } else {
+            proceedModeChange(mode);
+        }
+    }
+
+    function proceedModeChange(mode) {
+        if (!mode) mode = pendingMode; 
+        let t = db.find(d=>d.id===currentDetailId);
+        let grp = t.rtvBatchId?db.filter(x=>x.rtvBatchId===t.rtvBatchId):[t]; 
+        grp.forEach(x=>x.rtvType=mode); 
+        saveDB();
+        openRTVModal(t.id); applyFilters(); 
+    }
+
+    function executeSmartConsolidation() {
+        let t = db.find(d=>d.id===currentDetailId);
+        let candidates = db.filter(d => d.vendor === t.vendor && d.id !== t.id && d.rtv === 'Yes' && !d.rtvBatchId && (!d.rtvType || d.rtvType === '') );
+        
+        let batchName = `BATCH-AI-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Date.now().toString().slice(-4)}`;
+        
+        let allItems = [t, ...candidates];
+        allItems.forEach(item => {
+            item.rtvBatchId = batchName;
+            item.rtvType = pendingMode;
+            item.step = 0;
+            item.timestamps = [];
+            addLog(item, currentUserRole, `[Smart AI] 自動合併至 ${batchName}`);
+        });
+
+        saveDB();
+        bootstrap.Modal.getInstance(document.getElementById('smartConsolidateModal')).hide();
+        showToast("AI 合併成功", `已將 ${allItems.length} 筆資料合併為 ${batchName}`);
+        openRTVModal(t.id);
+        applyFilters();
+    }
+
+    function simulateAPISync() {
+        let btn = document.getElementById('btn-api-sync');
+        let item = db.find(d => d.id === currentDetailId);
+        if(!btn || !item) return;
+        
+        let orgHtml = btn.innerHTML;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> 查詢順豐接口...`;
+        btn.disabled = true;
+
+        setTimeout(() => {
+            btn.innerHTML = orgHtml;
+            btn.disabled = false;
+            
+            // --- 【API 智能自動穿越推進】 ---
+            if (item.rtvType === 'Courier' && item.step < 4) { // 如果還沒到 Arrived
+                let trackVal = document.getElementById('trackingNoInput').value || item.trackingNo || 'AUTO-' + Date.now().toString().slice(-6);
+                let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                let timeStr = now.toISOString().slice(0,16);
+                
+                // 直接推到 Arrived (index 4)
+                for(let i=item.step; i<=4; i++) {
+                    if(!item.timestamps) item.timestamps = [];
+                    item.timestamps[i] = timeStr;
+                }
+                item.trackingNo = trackVal;
+                item.courierComp = '順豐';
+                item.ata = timeStr.split('T')[0];
+                if(item.eta && item.ata > item.eta) item.delayStatus = 'Delayed'; else item.delayStatus = 'On Time';
+                
+                item.step = 5; // 推進到 FA Proc.
+                saveDB();
+                addLog(item, 'SF Express API', `[物流簽收] API 自動推進至: 已抵達 (Arrived)`);
+                
+                openRTVModal(item.id);
+                if(currentView === 'logistics') renderKanban(); else applyFilters();
+                showToast("API 同步成功", "順豐顯示已簽收，系統已為您自動跳轉至【已抵達】！", 4000);
+            } else {
+                let actTime = document.getElementById('actionTime');
+                if(actTime) actTime.value = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16);
+                nextStepModal(true); 
+                showToast("API 同步成功", "成功從物流商獲取最新狀態.", 3000);
+            }
+        }, 1500);
+    }
+
+    function openPublicTracking() {
+        let t = db.find(d=>d.id===currentDetailId);
+        if(!t || !t.rtvType) return showToast("錯誤", "尚未設定物流，無法生成連結。");
+
+        let win = window.open('', '_blank');
+        let statusHtml = '';
+        let names = t.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
+        names.forEach((n, i) => {
+             let clr = i <= t.step ? 'color:#10b981;' : 'color:#ccc;';
+             let icon = i <= t.step ? '✔' : '○';
+             let sub = (t.rtvType === 'Cargo' && i === 0 && t.cargoSubStep) ? ` <span style="font-size:12px; color:#4338ca;">[${t.cargoSubStep}]</span>` : '';
+             statusHtml += `<div style="margin-bottom:15px; ${clr}"><strong>${icon} ${n}${sub}</strong><br><small>${t.timestamps[i]?t.timestamps[i].replace('T',' '):''}</small></div>`;
+        });
+
+        win.document.write(`
+            <html><head><title>Tracking: ${t.qpn}</title><style>body{font-family:sans-serif; background:#f8fafc; padding:30px; text-align:center;} .card{background:white; max-width:500px; margin:0 auto; padding:30px; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.1);}</style></head>
+            <body>
+                <div class="card">
+                    <h2 style="color:#4338ca;">RTV Tracking Status</h2>
+                    <h1 style="font-size:3rem; margin:10px 0;">${t.step >= names.length ? 'DELIVERED' : 'IN TRANSIT'}</h1>
+                    <p style="color:#64748b;">Tracking ID: <strong>[${t.courierComp || '順豐'}] ${t.trackingNo||'Processing...'}</strong></p>
+                    <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+                    <div style="text-align:left; padding-left:20px;">
+                        ${statusHtml}
+                    </div>
+                </div>
+            </body></html>
+        `);
+    }
+
+    function printShippingLabel() {
+        let item = db.find(d => d.id === currentDetailId);
+        if(!item) return;
+        if(!item.rtvType) return showToast("錯誤", "請先設定物流方式。");
+
+        let printHtml = `
+            <div style="width: 100%; max-width: 600px; margin: 0 auto; border: 2px solid #000; padding: 20px; font-family: Arial, sans-serif;">
+                <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin: 0; font-weight: 900; letter-spacing: 2px;">RTV EXPRESS</h2>
+                    <h1 style="margin: 0; font-size: 3rem;">${item.rtvType === 'Courier' ? 'EXP' : 'STD'}</h1>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <div style="width: 48%;">
+                        <strong style="font-size: 0.8rem;">SHIP FROM:</strong><br>
+                        Site: ${item.site}<br>Factory: ${item.area}<br>DRI: ${item.iqcDRI}
+                    </div>
+                    <div style="width: 48%;">
+                        <strong style="font-size: 0.8rem;">SHIP TO:</strong><br>
+                        <strong>${item.vendor} Corp.</strong><br>
+                        Attn: ${item.rev} (FAE)<br>Returns Dept.
+                    </div>
+                </div>
+                <div style="border: 2px dashed #000; padding: 10px; text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 1.5rem; font-weight: bold; letter-spacing: 5px;">[${item.courierComp || '順豐'}] ${item.trackingNo || 'AWB PENDING'}</div>
+                    <div style="font-family: 'Courier New', Courier, monospace; font-size: 2.5rem; margin-top: 10px;">|||| |||||||| |||||| ||||||</div>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <tr><td style="border: 1px solid #000; padding: 5px;"><strong>QPN:</strong> ${item.qpn}</td><td style="border: 1px solid #000; padding: 5px;"><strong>Model:</strong> ${item.model}</td></tr>
+                    <tr><td colspan="2" style="border: 1px solid #000; padding: 5px;"><strong>SN:</strong> ${item.sn}</td></tr>
+                    <tr><td colspan="2" style="border: 1px solid #000; padding: 5px;"><strong>Desc:</strong> ${item.descIQC}</td></tr>
+                </table>
+            </div>
+        `;
+        
+        let printWindow = window.open('', '_blank', 'width=800,height=600');
+        printWindow.document.write('<html><head><title>Print Label</title></head><body>');
+        printWindow.document.write(printHtml);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.onload = function() {
+            printWindow.print();
+            printWindow.close();
+        };
+    }
+
+    window.simulateMobileScan = function(id) {
+        let t = db.find(d => d.id === id);
+        if(!t) return;
+        
+        let names = t.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
+        
+        let timelineHtml = '';
+        names.forEach((name, i) => {
+            let isActive = (i === t.step);
+            let isDone = (i < t.step);
+            let timeStr = (t.timestamps && t.timestamps[i]) ? t.timestamps[i].replace('T', ' ') : '-';
+            
+            let dotHtml = '';
+            if(isDone) {
+                dotHtml = `<div style="width:16px; height:16px; background:#8b5cf6; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px #8b5cf6;"></div>`;
+            } else if (isActive) {
+                dotHtml = `<div style="width:16px; height:16px; background:#f59e0b; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 2px #fde68a;"></div>`;
+            } else {
+                dotHtml = `<div style="width:16px; height:16px; background:#fff; border-radius:50%; border:2px solid #cbd5e1;"></div>`;
+            }
+
+            let extraHtml = '';
+            if (t.rtvType === 'Courier' && name.includes('快遞單號') && t.trackingNo) {
+                extraHtml = `<div style="margin-top:6px;"><span style="background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:12px; font-family:monospace;">🎫 [${t.courierComp || '順豐'}] ${t.trackingNo}</span></div>`;
+            }
+            if (t.rtvType === 'Cargo' && i === 0 && t.cargoSubStep) {
+                extraHtml += `<div style="margin-top:4px; font-size:12px; color:#4338ca; font-weight:bold;">↳ ${t.cargoSubStep}</div>`;
+            }
+
+            let dri = getDRI(i, t.rtvType);
+            let driHtml = '';
+            if (dri === 'IQC>>SQE') {
+                driHtml = `<span style="font-size:10px; background:#f1f5f9; color:#475569; padding:2px 5px; border-radius:4px; margin-left:6px; font-weight:bold;">IQC » SQE</span>`;
+            } else {
+                let driColor = dri === 'IQC' ? '#e0f2fe' : (dri === 'SQE' ? '#fef3c7' : '#fce7f3');
+                let driTextColor = dri === 'IQC' ? '#0369a1' : (dri === 'SQE' ? '#b45309' : '#a21caf');
+                driHtml = `<span style="font-size:10px; background:${driColor}; color:${driTextColor}; padding:2px 5px; border-radius:4px; margin-left:6px; font-weight:bold;">${dri}</span>`;
+            }
+
+            timelineHtml += `
+            <div style="position:relative; padding-left:30px; margin-bottom:24px;">
+                <div style="position:absolute; left:7px; top:4px; transform:translateX(-50%);">${dotHtml}</div>
+                <div style="font-weight:${isActive?'bold':'normal'}; color:${isActive?'#000':'#334155'}; font-size:15px;">
+                    ${name} ${driHtml}
+                </div>
+                <div style="font-size:12px; color:#94a3b8; margin-top:2px;">${timeStr}</div>
+                ${extraHtml}
+            </div>
+            `;
+        });
+        
+        let nextBtnText = t.step >= names.length ? '已結案 (Closed)' : `一鍵推進 (Quick Next): ${names[t.step]}`;
+        let nextBtnDisabled = t.step >= names.length ? 'disabled' : '';
+
+        let win = window.open('', '_blank', 'width=400,height=750');
+        window.mobileWin = win; 
+        
+        win.document.write(`
+            <!DOCTYPE html>
+            <html lang="zh-TW">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                <title>快速追蹤 (Quick Track)</title>
+                <style>
+                    body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 0; margin: 0; }
+                    .header { background: white; padding: 15px 20px; display: flex; align-items: center; border-bottom: 1px solid #e2e8f0; position:sticky; top:0; z-index:10; }
+                    .header-icon { color: #f59e0b; margin-right: 8px; font-size: 1.2rem; }
+                    .header-title { font-weight: 700; font-size: 1.1rem; flex-grow: 1; }
+                    .close-btn { color: #94a3b8; font-size: 1.5rem; text-decoration: none; }
+                    .main-card { background: white; margin: 20px; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+                    .field-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+                    .field-val { font-size: 16px; font-weight: 700; color: #4338ca; margin-bottom: 12px; }
+                    .badge-model { background: #f1f5f9; color: #334155; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 6px; font-weight: normal; }
+                    .badge-batch { background: #0ea5e9; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 6px; vertical-align: middle; }
+                    .section-title { margin: 0 20px 15px 20px; font-size: 14px; font-weight: 700; color: #64748b; display: flex; align-items: center; }
+                    .section-title::before { content: ''; display: inline-block; width: 3px; height: 14px; background: #64748b; margin-right: 8px; border-radius: 2px; }
+                    .timeline-box { margin: 0 20px 80px 20px; position: relative; }
+                    .timeline-line-bg { position: absolute; left: 7px; top: 10px; bottom: 30px; width: 2px; background: #e2e8f0; z-index: 0; }
+                    .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px 20px; border-top: 1px solid #e2e8f0; z-index: 20; }
+                    .btn-main { background: #4338ca; color: white; width: 100%; border: none; padding: 12px; border-radius: 8px; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;}
+                    .btn-main:active { background: #3730a3; transform: scale(0.98); }
+                    .btn-main:disabled { background: #cbd5e1; cursor: not-allowed; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="header-icon">⚡</div>
+                    <div class="header-title">快速追蹤 (Quick Track)</div>
+                    <a href="#" class="close-btn" onclick="window.close()">×</a>
+                </div>
+                <div class="main-card">
+                    <div class="field-label">料號 / 機種 (QPN / Model)</div>
+                    <div class="field-val">${t.qpn} <span class="badge-model">${t.model}</span></div>
+                    <div class="field-label">序號 (SN)</div>
+                    <div class="field-val" style="color:#0f172a;">${t.sn} ${t.rtvBatchId ? '<span class="badge-batch">已批次</span>' : ''}</div>
+                    <div class="field-label">物流 (Mode)</div>
+                    <div class="field-val" style="color:#0f172a; margin-bottom:0;">${t.rtvType}</div>
+                </div>
+                <div class="section-title">物流時間軸 (Logistics Timeline)</div>
+                <div class="timeline-box"><div class="timeline-line-bg"></div>${timelineHtml}</div>
+                <div class="bottom-bar"><button class="btn-main" onclick="window.opener.mobileUpdate(${t.id});" ${nextBtnDisabled}> ▶▶ ${nextBtnText}</button></div>
+            </body>
+            </html>
+        `);
+    }
+
+    window.mobileUpdate = function(id) {
+        let item = db.find(d => d.id === id);
+        if(!item) return;
+
+        let names = item.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
+        if(item.step >= names.length) return; 
+
+        let nextName = names[item.step];
+        let trackVal = '';
+        if (item.rtvType === 'Courier' && nextName.includes('快遞單號') && !item.trackingNo) {
+             trackVal = prompt(`[防呆檢查] 請輸入快遞單號 (預設為順豐，留空填入 AUTO 自動生成):`);
+             if(trackVal === null) return; 
+             if(trackVal.trim() === '' || trackVal.toUpperCase() === 'AUTO') {
+                 trackVal = 'AUTO-' + Date.now().toString().slice(-6); 
+             }
+        }
+
+        let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        let timeStr = now.toISOString().slice(0,16);
+        let targets = item.rtvBatchId ? db.filter(d => d.rtvBatchId === item.rtvBatchId) : [item];
+
+        targets.forEach(d => {
+            if(!d.timestamps) d.timestamps = [];
+            d.timestamps[d.step] = timeStr;
+            if(trackVal) {
+                d.trackingNo = trackVal;
+                d.courierComp = d.courierComp || '順豐';
+            }
+            d.step++;
+            if(nextName.includes('已抵達')) {
+                d.ata = timeStr.split('T')[0];
+                if(d.eta && d.ata > d.eta) d.delayStatus = 'Delayed'; else d.delayStatus = 'On Time';
+            }
+            addLog(d, 'Mobile User', `[WeChat推進] 完成: ${nextName}`);
+        });
+
+        saveDB();
+        applyFilters(); 
+        if(currentView === 'logistics') renderKanban();
+
+        if(window.mobileWin && !window.mobileWin.closed) {
+            window.simulateMobileScan(id); 
+        }
+    }
+
+    function renderTimelineModal(item) {
+        const box = document.getElementById('t-steps'); 
+        if(!box) return;
+        box.innerHTML = '';
+        let actArea = document.getElementById('action-area');
+        if(!item.rtvType) { 
+            box.innerHTML = '<div class="text-center py-5 text-muted w-100 fw-bold"><i class="fas fa-truck text-light fs-1 mb-2"></i><br>請先選擇物流方式 (Select Mode)</div>'; 
+            if(actArea) actArea.style.display = 'none'; 
+            let cSubArea = document.getElementById('cargoSubStepArea'); if(cSubArea) cSubArea.style.display = 'none';
+            return; 
+        }
+        let names = item.rtvType==='Cargo'?stepsCargo:stepsCourier; 
+        let icons = { "Kick Off": "flag", "已離廠 (Departed)": "truck-loading", "快遞中 (In Transit)": "plane", "退運中 (In Transit)": "ship", "快遞單號 (Tracking)": "barcode", "已抵達 (Arrived)": "building", "FA進行中 (FA Proc.)": "microscope", "FA已完成 (Closed)": "clipboard-check" };
+        
+        let cSubArea = document.getElementById('cargoSubStepArea');
+        if (cSubArea) {
+            if (item.rtvType === 'Cargo' && item.step === 0) {
+                cSubArea.style.display = 'block';
+                document.getElementById('cargoSubStepInput').value = item.cargoSubStep || '材料移交中';
+            } else {
+                cSubArea.style.display = 'none';
+            }
+        }
+
+        names.forEach((n, i) => {
+            let isDone = i < item.step; let isCurr = i === item.step; 
+            let timeHtml = (item.timestamps && item.timestamps[i]) ? `<div class="t-time-box">${item.timestamps[i].replace('T',' ')}</div>` : ''; 
+            let trackHtml = (item.rtvType==='Courier' && n.includes('快遞單號') && item.trackingNo) ? `<div class="tracking-box-green"><i class="fas fa-barcode"></i> [${item.courierComp || '順豐'}] ${item.trackingNo}</div>` : '';
+            
+            // --- 【DRI 顯示邏輯：支援 IQC>>SQE icon 並放至下方】 ---
+            let dri = getDRI(i, item.rtvType);
+            let driHtml = '';
+            if (dri === 'IQC>>SQE') {
+                driHtml = `<div class="mt-2"><span class="badge rounded-pill bg-info text-dark border shadow-sm" style="font-size:0.65rem; padding: 3px 8px;">IQC <i class="fas fa-angle-double-right text-secondary mx-1"></i> SQE</span></div>`;
+            } else {
+                let driClass = dri === 'IQC' ? 'bg-info text-dark' : (dri === 'SQE' ? 'bg-warning text-dark' : 'bg-primary text-white');
+                driHtml = `<div class="mt-2"><span class="badge rounded-pill ${driClass} border shadow-sm" style="font-size:0.65rem; padding: 3px 8px;">${dri}</span></div>`;
+            }
+
+            let subStepHtml = (item.rtvType === 'Cargo' && i === 0 && item.cargoSubStep) ? `<br><span class="badge bg-light text-primary border border-primary mt-1" style="font-size:0.65rem;">↳ ${item.cargoSubStep}</span>` : '';
+
+            box.innerHTML += `<div class="t-item ${isDone?'done':(isCurr?'active':'')}">${timeHtml}<div class="t-icon shadow-sm"><i class="fas fa-${isDone?'check':(icons[n]||'circle')}"></i></div><div class="t-label">${n}${subStepHtml}</div>${driHtml}${trackHtml}</div>`;
+        });
+        
+        let prog = document.getElementById('t-progress');
+        if(prog) prog.style.width = `${(item.step/(names.length-1)*100)}%`; 
+        
+        if(actArea) actArea.style.display = item.step >= names.length ? 'none' : 'block'; 
+        
+        let trkArea = document.getElementById('trackingInputArea');
+        if(trkArea) trkArea.style.display = (item.rtvType==='Courier' && names[item.step].includes('快遞單號')) ? 'block' : 'none';
+    }
+
+    function nextStepModal(isApiSync = false) {
+        let item = db.find(d => d.id === currentDetailId); 
+        if(!item) return;
+        
+        let actTime = document.getElementById('actionTime');
+        let time = actTime ? actTime.value : '';
+        if(!time) return showToast("錯誤 (Error)", "請輸入完成時間 (Time needed).");
+        if(item.step > 0 && item.timestamps[item.step-1] && new Date(time) < new Date(item.timestamps[item.step-1])) return showToast("錯誤 (Error)", "時間不可早於上一步 (Invalid time).");
+        
+        let trkInput = document.getElementById('trackingNoInput');
+        let track = trkInput ? trkInput.value : '';
+        
+        let courierSelect = document.getElementById('courierCompany');
+        let courierComp = courierSelect ? courierSelect.value : '順豐';
+        
+        let currentStepName = item.rtvType==='Cargo'?stepsCargo[item.step]:stepsCourier[item.step];
+        if(item.rtvType==='Courier' && currentStepName.includes('快遞單號') && !track && !item.trackingNo) {
+            return showToast("⛔ 防呆攔截", "必須填寫快遞單號 (AWB) 才能進行下一步！", 5000);
+        }
+
+        let list = item.rtvType==='Cargo'?stepsCargo:stepsCourier; 
+        let targets = item.rtvBatchId ? db.filter(d=>d.rtvBatchId===item.rtvBatchId) : [item];
+        let logMsgPrefix = isApiSync ? "[API 同步] 完成進度" : "完成進度";
+
+        targets.forEach(d => { 
+            d.timestamps[d.step] = time; 
+            if(track) {
+                d.trackingNo = track; 
+                d.courierComp = courierComp;
+            }
+            d.step++; 
+            if(list[d.step-1].includes('已抵達')) {
+                d.ata = time.split('T')[0];
+                if(d.eta && d.ata > d.eta) d.delayStatus = 'Delayed'; else d.delayStatus = 'On Time';
+            }
+            addLog(d, currentUserRole, `${logMsgPrefix}: ${list[d.step-1]}`); 
+        });
+        
+        saveDB(); 
+        if(!isApiSync) sendMailSimulation(targets, list[item.step-1], item.step - 1); 
+        
+        openRTVModal(item.id); 
+        if(currentView === 'logistics') renderKanban(); else applyFilters();
+    }
+
+    function sendMailSimulation(items, stepName, completedStepIndex) {
+        if(!items || items.length === 0) return;
+        let first = items[0];
+        let nextStepIndex = first.step;
+        let listLength = first.rtvType === 'Cargo' ? stepsCargo.length : stepsCourier.length;
+        
+        let recipientGroup = "";
+        let driRole = "";
+
+        if (nextStepIndex >= listLength) {
+            driRole = "All (Closed)";
+            recipientGroup = "All_Stakeholders";
+        } else {
+            driRole = getDRI(nextStepIndex, first.rtvType);
+            recipientGroup = (driRole.includes('IQC')) ? 'IQC_Team@quantacn.com' : 'SQE_Team@quantacn.com';
+        }
+
+        let mailGrpStr = document.getElementById('cfg-mailgroup') ? document.getElementById('cfg-mailgroup').value : "BU6_IQC@quantacn.com; QMH_IQC@quantacn.com";
+        let ccShanghai = "BU6_IQC@quantacn.com"; 
+        let to = `${mailGrpStr}; ${recipientGroup}`;
+        
+        let body = `
+            <div>
+                <div class="small fw-bold">TO: <span class="text-primary">${to}</span></div>
+                <div class="small fw-bold text-muted">CC: ${ccShanghai}</div>
+                <hr class="my-1 border-secondary">
+                <div class="small fw-bold mb-2">更新 (Updated): <span class="text-success">${stepName}</span></div>
+                <div class="small mb-1">下一階段 DRI: <span class="badge bg-warning text-dark">${driRole}</span></div>
+                <div class="small text-muted">案件包含 ${items.length} 筆資料</div>
+            </div>`;
+            
+        showToast("📧 自動信件已發送", body, 6000);
+    }
+
+    function showToast(title, msg, delay=4000) {
+        let id = 'toast-'+Date.now(); let h = `<div id="${id}" class="toast align-items-center border-0 mb-2 shadow" role="alert" aria-live="assertive" aria-atomic="true" style="width:350px;"><div class="d-flex"><div class="toast-body"><strong class="me-auto text-dark d-block mb-1"><i class="fas fa-bell text-primary me-2"></i>${title}</strong><span class="text-muted small">${msg}</span></div><button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+        let tc = document.getElementById('toastContainer');
+        if(tc) {
+            tc.insertAdjacentHTML('beforeend', h); 
+            let el = document.getElementById(id), t = new bootstrap.Toast(el,{delay:delay}); 
+            t.show(); el.addEventListener('hidden.bs.toast', ()=>el.remove());
+        }
+    }
+
+    function openMergeConfirmModal() {
+        let cbs = document.querySelectorAll('.row-cb:checked'); if(cbs.length < 1) return showToast("提示 (Info)", "請勾選資料 (Select items).");
+        let list = document.getElementById('mergeList'); if(list) list.innerHTML = ''; 
+        let vendors = new Set();
+        
+        cbs.forEach(cb => { 
+            let item = db.find(d => d.id == cb.value); 
+            if(item) {
+                vendors.add(item.vendor); 
+                if(list) list.innerHTML += `<li class="list-group-item bg-transparent text-muted"><i class="fas fa-microchip me-2"></i>${item.sn} <span class="float-end">T0: ${item.t0Result}</span></li>`; 
+            }
+        });
+        
+        if(vendors.size > 1) return showToast("錯誤 (Error)", "只能合併相同廠商的資料 (Must merge same vendor)."); 
+        
+        setElText('mergeCount', cbs.length); 
+        let mbn = document.getElementById('mergeBatchName');
+        if(mbn) mbn.value = `BATCH-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Date.now().toString().slice(-4)}`;
+        
+        let mEl = document.getElementById('mergeModal');
+        if(mEl) bootstrap.Modal.getOrCreateInstance(mEl).show();
+    }
+
+    function confirmMerge() { 
+        let mbn = document.getElementById('mergeBatchName');
+        let batchName = mbn ? mbn.value : ''; 
+        document.querySelectorAll('.row-cb:checked').forEach(cb => { 
+            let item = db.find(d=>d.id==cb.value); 
+            if(item) {
+                item.rtv = 'Yes'; item.rtvBatchId = batchName; item.rtvType = ''; item.step = 0; item.timestamps = []; item.eta = ''; item.ata = ''; addLog(item, currentUserRole, `合併 (Merged): ${batchName}`); 
+            }
+        }); 
+        saveDB();
+        let mEl = document.getElementById('mergeModal');
+        if(mEl) bootstrap.Modal.getOrCreateInstance(mEl).hide(); 
+        applyFilters(); 
+        showToast("系統 (System)", `批次 ${batchName} 已建立.`); 
+    }
+    
+    function updateRTVStatus(id, val) { 
+        let item = db.find(d => d.id === id); 
+        if(item) { 
+            item.rtv = val; 
+            if(val !== 'Yes') { item.rtvType = ''; item.trackingNo = ''; item.timestamps = []; item.step = 0; item.eta = ''; item.ata = ''; item.cargoSubStep = ''; } 
+            saveDB();
+            applyFilters(); 
+        } 
+    }
+    
+    function openSettingsModal() { let m = document.getElementById('settingsModal'); if(m) bootstrap.Modal.getOrCreateInstance(m).show(); }
+    function saveEmailConfig() { 
+        let m = document.getElementById('settingsModal'); 
+        if(m) bootstrap.Modal.getOrCreateInstance(m).hide(); 
+        showToast("系統 (System)", "設定已儲存 (Config updated)."); 
+        if(currentView === 'logistics') renderKanban(); else applyFilters();
+    }
+    
+    function prevStep() { 
+        if(confirm("確定回退？ (Revert step?)")){ 
+            let t = db.find(d=>d.id===currentDetailId); if(!t) return; 
+            let grp = t.rtvBatchId?db.filter(x=>x.rtvBatchId===t.rtvBatchId):[t]; 
+            grp.forEach(x=>{ 
+                x.step--; 
+                x.timestamps[x.step]=null; 
+                if (x.step < (x.rtvType==='Cargo'?3:4)) { x.ata = ''; x.delayStatus = ''; }
+            }); 
+            saveDB();
+            openRTVModal(t.id); 
+            if(currentView === 'logistics') renderKanban(); else applyFilters(); 
+        } 
+    }
+    
+    function deleteSelected() { 
+        let ids=[...document.querySelectorAll('.row-cb:checked')].map(c=>parseInt(c.value)); 
+        if(ids.length && confirm("確定刪除？ (Delete?)")) { 
+            db=db.filter(d=>!ids.includes(d.id)); 
+            saveDB();
+            applyFilters(); 
+        } 
+    }
+    
+    function toggleAll() { let c = document.getElementById('checkAll'); if(!c) return; let isC = c.checked; document.querySelectorAll('.row-cb').forEach(cb=>cb.checked=isC); }
+    function addLog(d, who, what) { d.logs.unshift({who, when:new Date().toLocaleString('zh-TW',{hour12:false}), what}); }
+    function renderLogs(l) { let lc = document.getElementById('log-container'); if(lc) lc.innerHTML = l.map(x=>`<div class="log-item"><div class="log-time" style="font-size:0.7rem;">${x.when} <span class="badge bg-secondary ms-1">${x.who}</span></div><div class="text-dark small mt-1">${x.what}</div></div>`).join(''); }
+    function addComment() { 
+        let nc = document.getElementById('newComment'); if(!nc) return; let txt = nc.value; if(!txt) return; 
+        let d = db.find(x=>x.id===currentDetailId); 
+        if(d) { 
+            d.comments.unshift({who:currentUserRole, msg:txt, time:new Date().toLocaleString()}); 
+            saveDB();
+            nc.value=''; renderComments(d.comments); 
+        } 
+    }
+    function renderComments(c) { let cc = document.getElementById('comment-container'); if(cc) cc.innerHTML = c.map(x=>`<div class="comment-item shadow-sm"><div class="d-flex justify-content-between small text-muted mb-1"><span class="fw-bold text-primary">${x.who}</span><span style="font-size:0.7rem;">${x.time}</span></div><div class="small">${x.msg}</div></div>`).join(''); }
+    function removeFromBatch(id) { 
+        if(!confirm("自批次移除？ (Remove from batch?)")) return; 
+        let item = db.find(d=>d.id===id); 
+        if(item) { 
+            item.rtv = 'Pending'; item.rtvBatchId = null; item.rtvType = ''; item.step = 0; item.eta = ''; item.ata = ''; 
+            saveDB();
+            applyFilters(); 
+        } 
+    }
+    
+    function openEditModal(id) { 
+        let d = db.find(x=>x.id===id); 
+        if(!d) return;
+        document.getElementById('edit-id').value = id; 
+        
+        document.getElementById('edit-site').value = d.site || '';
+        document.getElementById('edit-area').value = d.area || '';
+        document.getElementById('edit-time').value = d.occurTime || '';
+        document.getElementById('edit-model').value = d.model || '';
+        document.getElementById('edit-stage').value = d.stage || '';
+        document.getElementById('edit-iqcDRI').value = d.iqcDRI || '';
+
+        document.getElementById('edit-vendor').value = d.vendor || '';
+        document.getElementById('edit-qpn').value = d.qpn || '';
+        document.getElementById('edit-parts').value = d.parts || '';
+        document.getElementById('edit-sn').value = d.sn || '';
+        document.getElementById('edit-failStation').value = d.failStation || '';
+        document.getElementById('edit-radar').value = d.radar || '';
+        
+        document.getElementById('edit-descLine').value = d.descLine || '';
+        document.getElementById('edit-descIQC').value = d.descIQC || '';
+
+        // 解析不良率字串回填
+        let rateStr = d.defectRate || '';
+        let match = rateStr.match(/(\d+)F\/(\d+)T/);
+        if(match) {
+            document.getElementById('editDefectF').value = match[1];
+            document.getElementById('editDefectT').value = match[2];
+        } else {
+            document.getElementById('editDefectF').value = '';
+            document.getElementById('editDefectT').value = '';
+        }
+        calculateDefectRate('edit');
+
+        document.getElementById('edit-t0Result').value = d.t0Result || 'Fail';
+        document.getElementById('edit-t1Result').value = d.t1Result || '';
+        document.getElementById('edit-rev').value = d.rev || '';
+        
+        document.getElementById('edit-resApp').value = d.resApp || '';
+        document.getElementById('edit-resDim').value = d.resDim || '';
+        document.getElementById('edit-resFunc').value = d.resFunc || '';
+
+        document.getElementById('edit-priority').checked = d.priority || false; 
+        
+        let em = document.getElementById('editModal'); 
+        if(em) bootstrap.Modal.getOrCreateInstance(em).show(); 
+    }
+    
+    function saveEdit() { 
+        let eid = document.getElementById('edit-id'); if(!eid) return;
+        let id = parseInt(eid.value); 
+        let d = db.find(x=>x.id===id); 
+        if(!d) return;
+
+        d.site = document.getElementById('edit-site').value;
+        d.area = document.getElementById('edit-area').value;
+        d.occurTime = document.getElementById('edit-time').value;
+        d.model = document.getElementById('edit-model').value;
+        d.stage = document.getElementById('edit-stage').value;
+        d.iqcDRI = document.getElementById('edit-iqcDRI').value;
+
+        d.vendor = document.getElementById('edit-vendor').value;
+        d.qpn = document.getElementById('edit-qpn').value;
+        d.parts = document.getElementById('edit-parts').value;
+        d.sn = document.getElementById('edit-sn').value;
+        d.failStation = document.getElementById('edit-failStation').value;
+        d.radar = document.getElementById('edit-radar').value;
+
+        d.descLine = document.getElementById('edit-descLine').value;
+        d.descIQC = document.getElementById('edit-descIQC').value;
+
+        // 重組不良率字串
+        let fEdit = document.getElementById('editDefectF').value;
+        let tEdit = document.getElementById('editDefectT').value;
+        let pctEdit = document.getElementById('editDefectDisplay').innerText;
+        d.defectRate = (fEdit !== '' && tEdit !== '') ? `${fEdit}F/${tEdit}T=${pctEdit}` : '';
+
+        d.t0Result = document.getElementById('edit-t0Result').value;
+        d.t1Result = document.getElementById('edit-t1Result').value;
+        d.rev = document.getElementById('edit-rev').value;
+
+        d.resApp = document.getElementById('edit-resApp').value;
+        d.resDim = document.getElementById('edit-resDim').value;
+        d.resFunc = document.getElementById('edit-resFunc').value;
+
+        d.priority = document.getElementById('edit-priority').checked; 
+        
+        saveDB();
+        
+        let em = document.getElementById('editModal'); 
+        if(em) bootstrap.Modal.getOrCreateInstance(em).hide(); 
+        
+        applyFilters(); 
+        if(currentView === 'logistics') renderKanban();
+        addLog(d, currentUserRole, "Super Admin 強制修改資料 (Force Edited)."); 
+        showToast("更新成功", "資料已由管理員覆寫。");
+    }
+</script>
+</body>
+</html>
