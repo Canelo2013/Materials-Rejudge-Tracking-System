@@ -744,25 +744,37 @@
 
     async function initFirebase() {
         try {
+            // Import the functions you need from the SDKs you need
             const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
-            const { getAuth, signInWithCustomToken, signInAnonymously } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+            const { getAuth, signInAnonymously } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
             const { getFirestore, doc, setDoc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
 
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            // Your web app's Firebase configuration
+            const firebaseConfig = {
+                apiKey: "AIzaSyCIYkVp_L4_-A2uoKggcL6p98bnYtcLoAQ",
+                authDomain: "rtv-system.firebaseapp.com",
+                projectId: "rtv-system",
+                storageBucket: "rtv-system.firebasestorage.app",
+                messagingSenderId: "780397828789",
+                appId: "1:780397828789:web:9a47d47b24dbe01f697cfc"
+            };
+
+            // Initialize Firebase
             const app = initializeApp(firebaseConfig);
             const auth = getAuth(app);
-            firestoreDb = getFirestore(app);
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'rtv-system-demo';
-
-            // 驗證登入
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
+            
+            // 嘗試進行匿名登入 (若發生 configuration-not-found 錯誤，代表後台尚未啟用此功能)
+            try {
                 await signInAnonymously(auth);
+            } catch (authError) {
+                console.warn("Firebase 提示：後台尚未啟用 Authentication > 匿名登入。系統將以無登入訪客狀態繼續連線資料庫...");
+                // 【關鍵修復】: 移除 throw authError; 讓程式不會在這裡中斷，繼續往下執行資料庫連線！
             }
 
-            // 指向共用的公共文件，所有裝置皆讀寫此節點
-            mainDocRef = doc(firestoreDb, 'artifacts', appId, 'public', 'data', 'rtv_state', 'main_records');
+            firestoreDb = getFirestore(app);
+
+            // 指向您專屬資料庫的集合與文件
+            mainDocRef = doc(firestoreDb, 'RTV_System_Data', 'Global_Records');
 
             // 綁定即時監聽 (Real-time listener)
             onSnapshot(mainDocRef, (snapshot) => {
@@ -1764,7 +1776,12 @@
                 let isDone = i < item.step; let isActive = i === item.step;
                 let statusClass = isDone ? 'done' : (isActive ? 'active' : '');
                 let timeStr = (item.timestamps && item.timestamps[i]) ? item.timestamps[i].replace('T', ' ') : '-';
-                let trackInfo = (item.rtvType === 'Courier' && n.includes('快遞單號') && item.trackingNo) ? `<div class="mt-1"><span class="badge bg-success"><i class="fas fa-barcode"></i> [${item.courierComp || '順豐'}] ${item.trackingNo}</span></div>` : '';
+                
+                // --- 【加入順豐超連結】 ---
+                let trackLink = `https://www.sf-express.com/chn/zh/waybill/list?trackNumbers=${item.trackingNo}`;
+                let trackInfo = (item.rtvType === 'Courier' && n.includes('快遞單號') && item.trackingNo) ? 
+                    `<div class="mt-1"><a href="${trackLink}" target="_blank" class="badge bg-success" style="text-decoration:none;"><i class="fas fa-shipping-fast"></i> [順豐] ${item.trackingNo}</a></div>` : '';
+
                 let subStepInfo = (item.rtvType === 'Cargo' && i === 0 && item.cargoSubStep) ? `<div class="text-primary mt-1" style="font-size:0.7rem; font-weight:bold;">↳ ${item.cargoSubStep}</div>` : '';
 
                 // --- 【DRI 顯示邏輯】 ---
@@ -2153,7 +2170,9 @@
 
             let extraHtml = '';
             if (t.rtvType === 'Courier' && name.includes('快遞單號') && t.trackingNo) {
-                extraHtml = `<div style="margin-top:6px;"><span style="background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:12px; font-family:monospace;">🎫 [${t.courierComp || '順豐'}] ${t.trackingNo}</span></div>`;
+                // --- 【手機端也加入順豐超連結】 ---
+                let trackLink = `https://www.sf-express.com/chn/zh/waybill/list?trackNumbers=${t.trackingNo}`;
+                extraHtml = `<div style="margin-top:6px;"><a href="${trackLink}" target="_blank" style="background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:12px; font-family:monospace; text-decoration:none;">🎫 [${t.courierComp || '順豐'}] ${t.trackingNo}</a></div>`;
             }
             if (t.rtvType === 'Cargo' && i === 0 && t.cargoSubStep) {
                 extraHtml += `<div style="margin-top:4px; font-size:12px; color:#4338ca; font-weight:bold;">↳ ${t.cargoSubStep}</div>`;
@@ -2309,8 +2328,12 @@
         names.forEach((n, i) => {
             let isDone = i < item.step; let isCurr = i === item.step; 
             let timeHtml = (item.timestamps && item.timestamps[i]) ? `<div class="t-time-box">${item.timestamps[i].replace('T',' ')}</div>` : ''; 
-            let trackHtml = (item.rtvType==='Courier' && n.includes('快遞單號') && item.trackingNo) ? `<div class="tracking-box-green"><i class="fas fa-barcode"></i> [${item.courierComp || '順豐'}] ${item.trackingNo}</div>` : '';
             
+            // --- 【加入順豐超連結】 ---
+            let trackLink = `https://www.sf-express.com/chn/zh/waybill/list?trackNumbers=${item.trackingNo}`;
+            let trackHtml = (item.rtvType === 'Courier' && n.includes('快遞單號') && item.trackingNo) ? 
+                `<div class="mt-2"><a href="${trackLink}" target="_blank" class="badge bg-success px-2 py-1 shadow-sm" style="text-decoration:none;"><i class="fas fa-shipping-fast"></i> [順豐] ${item.trackingNo}</a></div>` : '';
+                
             // --- 【DRI 顯示邏輯：支援 IQC>>SQE icon 並放至下方】 ---
             let dri = getDRI(i, item.rtvType);
             let driHtml = '';
