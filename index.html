@@ -725,50 +725,93 @@
     <div class="modal-footer border-top px-4 py-3 bg-light"><button type="button" class="btn btn-dark px-4" onclick="saveEmailConfig()">儲存設定 (Save Configuration)</button></div>
 </div></div></div>
 
-<!-- 懸浮 HUD 容器 -->
-<div id="sn-hover-hud" class="sn-hud"></div>
-
-<!-- 浮動批次工具列 -->
-<div id="floating-batch-bar" class="floating-toolbar">
-    <span id="batch-sel-count" class="fw-bold text-warning" style="font-size: 0.95rem;">已選擇 0 筆單據</span>
-    <div style="width:1px; height:20px; background:rgba(255,255,255,0.2);"></div>
-    <button class="btn btn-sm btn-success fw-bold rounded-pill shadow-sm" onclick="batchAdvanceGrid()"><i class="fas fa-forward me-1"></i> 同步更新為下一階段</button>
-    <button class="btn btn-sm btn-light fw-bold rounded-pill text-dark shadow-sm" onclick="openMergeConfirmModal()"><i class="fas fa-object-group me-1"></i> 建立批次</button>
-</div>
-
-<!-- 逾期主動推播 Modal -->
-<div class="modal fade" id="overdueAlertModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border: 2px solid #ef4444;">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title fw-bold"><i class="fas fa-siren-on me-2"></i>🚨 急件待辦提醒 (Action Required)</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body bg-light">
-                <p class="text-dark fw-bold mb-2">系統偵測到以下單據已超過 7 天未推進，請盡速處理：</p>
-                <ul class="list-group shadow-sm" id="overdue-alert-list" style="max-height: 250px; overflow-y:auto;">
-                    <!-- 動態載入 -->
-                </ul>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-danger w-100 fw-bold" data-bs-dismiss="modal" onclick="switchNav('logistics')">前往 Kanban 處理</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div id="printArea" style="display: none;"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- 資料庫初始化 ---
+    // --- 資料庫初始化 (升級為雲端即時同步架構) ---
     let defaultData = [
         { id: 1, priority: true, site: 'QSMC', occurTime: '2023-11-01T08:00', area: 'F1', model: 'J81a', stage: 'PVT', iqcDRI: 'Alex', vendor: 'LITEON', qpn: 'AA130WQ1000', parts: 'IC', sn: 'SN-001', failStation: 'FATP', radar: '1234567', descLine: 'No Power on mainboard', descIQC: 'Pin broken', t0Result: 'Fail', t1Result: '', defectRate: '1F/50T=2%', rev: 'Tom FAE', resApp: 'NG', resDim: 'OK', resFunc: 'Not Test', hasImg: true, rtv: 'Yes', rtvBatchId: 'Batch-1001', rtvType: 'Courier', courierComp: '順豐', trackingNo: 'SF999999999', step: 3, cargoSubStep: '', eta: '2023-11-08', ata: '', delayStatus: '', timestamps: ['2023-11-01T10:00','2023-11-02T10:00','2023-11-03T10:00','2023-11-04T10:00'], createdAt: '2023-11-01', logs: [], comments: [] },
         { id: 2, priority: false, site: 'QCMT', occurTime: '2023-11-20T09:00', area: 'F2', model: 'M2', stage: 'EVT', iqcDRI: 'Bob', vendor: 'DELTA', qpn: 'BB550XD2000', parts: 'Resistor', sn: 'SN-002', failStation: 'CR', radar: '4567890', descLine: 'Scratch', descIQC: 'Scratch confirmed', t0Result: 'Pass', t1Result: 'Pass', defectRate: '0F/100T=0%', rev: 'Jerry FAE', resApp: 'OK', resDim: 'OK', resFunc: 'Pass', hasImg: false, rtv: 'No', rtvBatchId: null, rtvType: '', courierComp: '', trackingNo: '', step: 0, cargoSubStep: '', eta: '', ata: '', delayStatus: '', timestamps: [], createdAt: '2023-11-25', logs: [], comments: [] }
     ];
 
     let db = JSON.parse(localStorage.getItem('rtv_db')) || defaultData;
-    function saveDB() { localStorage.setItem('rtv_db', JSON.stringify(db)); }
+    
+    // --- 【雲端資料庫 Firebase 整合模組】 ---
+    let firestoreDb = null;
+    let mainDocRef = null;
+    let isFirebaseReady = false;
+
+    async function initFirebase() {
+        try {
+            const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+            const { getAuth, signInWithCustomToken, signInAnonymously } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+            const { getFirestore, doc, setDoc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            firestoreDb = getFirestore(app);
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'rtv-system-demo';
+
+            // 驗證登入
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+
+            // 指向共用的公共文件，所有裝置皆讀寫此節點
+            mainDocRef = doc(firestoreDb, 'artifacts', appId, 'public', 'data', 'rtv_state', 'main_records');
+
+            // 綁定即時監聽 (Real-time listener)
+            onSnapshot(mainDocRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.data();
+                    if (data && data.records) {
+                        db = data.records; // 將雲端資料覆寫本地
+                        localStorage.setItem('rtv_db', JSON.stringify(db)); // 備份到本地
+                        
+                        // 若使用者已進入系統，即時重新渲染畫面
+                        if (document.getElementById('wrapper').style.display === 'flex') {
+                            applyFilters();
+                            if(currentView === 'logistics') renderKanban();
+                        }
+                    }
+                } else {
+                    // 雲端還沒有資料，將現有資料上傳
+                    saveDBToCloud();
+                }
+                isFirebaseReady = true;
+            }, (error) => {
+                console.error("雲端同步發生錯誤:", error);
+            });
+
+        } catch(e) {
+            console.error("Firebase 初始化失敗，降級為單機本地端模式", e);
+            isFirebaseReady = true; 
+        }
+    }
+
+    // 啟動 Firebase 監聽
+    window.addEventListener('DOMContentLoaded', initFirebase);
+
+    // 改寫儲存機制：雙軌儲存 (本地 + 雲端)
+    function saveDB() { 
+        localStorage.setItem('rtv_db', JSON.stringify(db)); 
+        if (isFirebaseReady) saveDBToCloud();
+    }
+
+    async function saveDBToCloud() {
+        if (!mainDocRef || !firestoreDb) return;
+        try {
+            const { setDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            // 將整包資料上拋雲端，觸發所有連線裝置更新
+            await setDoc(mainDocRef, { records: db });
+        } catch(e) {
+            console.error("無法儲存至雲端", e);
+        }
+    }
 
     const stepsCourier = ["Kick Off", "已離廠 (Departed)", "快遞中 (In Transit)", "快遞單號 (Tracking)", "已抵達 (Arrived)", "FA進行中 (FA Proc.)", "FA已完成 (Closed)"];
     const stepsCargo   = ["Kick Off", "已離廠 (Departed)", "退運中 (In Transit)", "已抵達 (Arrived)", "FA進行中 (FA Proc.)", "FA已完成 (Closed)"];
