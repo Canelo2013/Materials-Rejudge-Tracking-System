@@ -74,13 +74,22 @@
         .table-enterprise tbody td { vertical-align: middle; padding: 8px 16px; border-bottom: 1px solid var(--border-color); background: white; }
         .table-enterprise tbody tr:hover td { background-color: #f1f5f9; }
         
-        .sticky-col-1 { position: sticky; left: 0; z-index: 5; background-color: inherit; width: 40px; box-shadow: inset -1px 0 0 var(--border-color); }
-        .sticky-col-2 { position: sticky; left: 40px; z-index: 5; background-color: inherit; min-width: 80px; box-shadow: inset -1px 0 0 var(--border-color); }
-        .sticky-col-3 { position: sticky; left: 120px; z-index: 5; background-color: inherit; min-width: 150px; box-shadow: inset -1px 0 0 var(--border-color); }
-        .sticky-col-4 { position: sticky; left: 270px; z-index: 5; background-color: inherit; min-width: 100px; box-shadow: inset -1px 0 0 var(--border-color); }
-        .sticky-col-5 { position: sticky; left: 370px; z-index: 5; background-color: inherit; min-width: 150px; box-shadow: inset -1px 0 0 var(--border-color); }
-        .sticky-col-6 { position: sticky; left: 520px; z-index: 5; background-color: inherit; min-width: 100px; box-shadow: inset -1px 0 0 var(--border-color); }
-        .table-enterprise thead th.sticky-col-1, .table-enterprise thead th.sticky-col-2, .table-enterprise thead th.sticky-col-3, .table-enterprise thead th.sticky-col-4, .table-enterprise thead th.sticky-col-5, .table-enterprise thead th.sticky-col-6 { background-color: #f8fafc; z-index: 11; }
+        /* --- 【修復：移除 inherit，全面改用實心 #fff，徹底消滅透明穿透錯覺】 --- */
+        .sticky-col-1 { position: sticky; left: 0; z-index: 5; background-color: #fff; min-width: 40px; max-width: 40px; box-shadow: inset -1px 0 0 var(--border-color); }
+        .sticky-col-2 { position: sticky; left: 40px; z-index: 5; background-color: #fff; min-width: 90px; max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: inset -1px 0 0 var(--border-color); padding-left: 8px !important; padding-right: 8px !important; text-align: center; } /* ★ 廠區放寬至 90px，確保完整顯示 QCMT F1 等組合文字 */
+        .sticky-col-3 { position: sticky; left: 130px; z-index: 5; background-color: #fff; min-width: 150px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: inset -1px 0 0 var(--border-color); padding-left: 6px !important; padding-right: 6px !important; } /* ★ 配合加寬，起點右移至 130px */
+        .sticky-col-4 { position: sticky; left: 280px; z-index: 5; background-color: #fff; min-width: 100px; max-width: 100px; box-shadow: inset -1px 0 0 var(--border-color); } /* 右移 */
+        .sticky-col-5 { position: sticky; left: 380px; z-index: 5; background-color: #fff; min-width: 90px; max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: inset -1px 0 0 var(--border-color); } /* 右移 */
+        .sticky-col-6 { position: sticky; left: 470px; z-index: 5; background-color: #fff; min-width: 65px; max-width: 65px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: inset -1px 0 0 var(--border-color); padding-left: 8px !important; padding-right: 8px !important; } /* 右移 */
+        .sticky-col-7 { position: sticky; left: 535px; z-index: 5; background-color: #fff; min-width: 70px; max-width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: inset -1px 0 0 var(--border-color); padding-left: 8px !important; padding-right: 8px !important; } /* 右移 */
+        .sticky-col-8 { position: sticky; left: 605px; z-index: 5; background-color: #fff; min-width: 200px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: inset -1px 0 0 var(--border-color); padding-left: 8px !important; padding-right: 8px !important; } /* 右移 */
+        .sticky-col-9 { position: sticky; left: 805px; z-index: 5; background-color: #fff; min-width: 140px; max-width: 140px; box-shadow: inset -1px 0 0 var(--border-color); } /* 右移，整體重新對齊 */
+        
+        /* 確保滑鼠懸浮時，凍結欄位依然是實心灰色，絕對不會破版 */
+        .table-enterprise tbody tr:hover td.sticky-col-1, .table-enterprise tbody tr:hover td.sticky-col-2, .table-enterprise tbody tr:hover td.sticky-col-3, .table-enterprise tbody tr:hover td.sticky-col-4, .table-enterprise tbody tr:hover td.sticky-col-5, .table-enterprise tbody tr:hover td.sticky-col-6, .table-enterprise tbody tr:hover td.sticky-col-7, .table-enterprise tbody tr:hover td.sticky-col-8, .table-enterprise tbody tr:hover td.sticky-col-9 { background-color: #f1f5f9 !important; }
+        
+        /* 表頭同樣強制給予實心背景 */
+        .table-enterprise thead th.sticky-col-1, .table-enterprise thead th.sticky-col-2, .table-enterprise thead th.sticky-col-3, .table-enterprise thead th.sticky-col-4, .table-enterprise thead th.sticky-col-5, .table-enterprise thead th.sticky-col-6, .table-enterprise thead th.sticky-col-7, .table-enterprise thead th.sticky-col-8, .table-enterprise thead th.sticky-col-9 { background-color: #f8fafc !important; z-index: 11; }
 
         /* --- Badges & 統計 --- */
         .badge-enterprise { padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 0.7rem; }
@@ -265,17 +274,13 @@
             <h3 class="fw-bold text-dark" style="font-size: 1.5rem;">Materials Rejudge Tracking System</h3>
             <p class="text-muted small">Global Logistics & Traceability Platform</p>
         </div>
-        <div class="mb-3 text-start">
+        <div class="mb-4 text-start">
             <label class="form-label">登入身份 (Role Authorization)</label>
-            <select id="roleSelect" class="form-select form-select-custom form-select-lg" onchange="document.getElementById('loginVendorDiv').style.display = this.value === 'SuperAdmin' ? 'none' : 'block';">
+            <!-- 修正 2：移除 loginVendorDiv 相關觸發與廠商綁定 -->
+            <select id="roleSelect" class="form-select form-select-custom form-select-lg">
                 <option value="SuperAdmin">系統管理員 (Super Admin)</option>
-                <option value="Engineer">工程師 / 廠商 (Engineer / Vendor)</option>
+                <option value="Engineer">工程師 (Engineer)</option>
             </select>
-        </div>
-        <!-- 修正：加入廠商輸入框，讓工程師過濾自己的單據 -->
-        <div class="mb-4 text-start" id="loginVendorDiv" style="display:none;">
-            <label class="form-label text-danger">所屬廠商 (Vendor Name) *</label>
-            <input type="text" id="loginVendor" class="form-control form-control-custom form-control-lg" placeholder="例如: LITEON, DELTA...">
         </div>
         <button class="btn btn-brand w-100 btn-lg rounded-3 fw-bold shadow-sm" onclick="login()">Enter Workspace <i class="fas fa-arrow-right ms-2"></i></button>
     </div>
@@ -372,14 +377,76 @@
                             <input type="radio" class="btn-check" name="viewMode" id="viewList" checked onchange="toggleView('list')"><label class="btn btn-outline-primary btn-sm fw-bold" for="viewList"><i class="fas fa-list"></i> 散單 (List)</label>
                             <input type="radio" class="btn-check" name="viewMode" id="viewBatch" onchange="toggleView('batch')"><label class="btn btn-outline-primary btn-sm fw-bold" for="viewBatch"><i class="fas fa-box-open"></i> 批次 (Batch)</label>
                         </div>
-                        <div style="width: 1px; height: 24px; background: #cbd5e1; margin: 0 8px;"></div>
-                        <select class="form-select form-select-sm shadow-sm" id="filterResult" onchange="applyFilters()" style="width: 140px; font-weight: 500;">
-                            <option value="All">T0 結果: 全部</option>
-                            <option value="Pass">Pass</option>
-                            <option value="Fail">Fail</option>
-                            <option value="NA">未測/無 (NA)</option>
+                    </div>
+                </div>
+
+                <!-- 修正 4：新增全域多維度進階篩選器 (改用 Bootstrap 純正 Dropdown 選單) -->
+                <div class="card-enterprise p-3 mb-3 d-flex flex-wrap gap-2 align-items-center border-top">
+                    <span class="text-muted small fw-bold me-1"><i class="fas fa-filter text-primary"></i> 篩選器:</span>
+                    
+                    <div class="input-group input-group-sm shadow-sm" style="width: 170px;">
+                        <span class="input-group-text bg-light text-muted">SN</span>
+                        <input type="text" class="form-control" id="filterSN" placeholder="全部" onkeyup="debounceSearch()" onchange="applyFilters()">
+                        <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" id="ddFilterSN" style="max-height: 250px; overflow-y: auto;"></ul>
+                    </div>
+
+                    <div class="input-group input-group-sm shadow-sm" style="width: 160px;">
+                        <span class="input-group-text bg-light text-muted">工程師</span>
+                        <input type="text" class="form-control" id="filterDRI" placeholder="全部" onkeyup="debounceSearch()" onchange="applyFilters()">
+                        <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" id="ddFilterDRI" style="max-height: 250px; overflow-y: auto;"></ul>
+                    </div>
+
+                    <div class="input-group input-group-sm shadow-sm" style="width: 150px;">
+                        <span class="input-group-text bg-light text-muted">廠區</span>
+                        <input type="text" class="form-control" id="filterFac" placeholder="全部" onkeyup="debounceSearch()" onchange="applyFilters()">
+                        <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" id="ddFilterFac" style="max-height: 250px; overflow-y: auto;"></ul>
+                    </div>
+
+                    <div class="input-group input-group-sm shadow-sm" style="width: 160px;">
+                        <span class="input-group-text bg-light text-muted">機種</span>
+                        <input type="text" class="form-control" id="filterModel" placeholder="全部" onkeyup="debounceSearch()" onchange="applyFilters()">
+                        <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" id="ddFilterModel" style="max-height: 250px; overflow-y: auto;"></ul>
+                    </div>
+
+                    <div class="input-group input-group-sm shadow-sm" style="width: 150px;">
+                        <span class="input-group-text bg-light text-muted">階段</span>
+                        <input type="text" class="form-control" id="filterStage" placeholder="全部" onkeyup="debounceSearch()" onchange="applyFilters()">
+                        <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" id="ddFilterStage" style="max-height: 250px; overflow-y: auto;"></ul>
+                    </div>
+
+                    <div class="input-group input-group-sm shadow-sm" style="width: 160px;">
+                        <span class="input-group-text bg-light text-muted">材料</span>
+                        <input type="text" class="form-control" id="filterParts" placeholder="全部" onkeyup="debounceSearch()" onchange="applyFilters()">
+                        <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" id="ddFilterParts" style="max-height: 250px; overflow-y: auto;"></ul>
+                    </div>
+
+                    <div class="input-group input-group-sm shadow-sm" style="width: 160px;">
+                        <span class="input-group-text bg-light text-muted">廠商</span>
+                        <input type="text" class="form-control" id="filterVendor" placeholder="全部" onkeyup="debounceSearch()" onchange="applyFilters()">
+                        <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" type="button" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" id="ddFilterVendor" style="max-height: 250px; overflow-y: auto;"></ul>
+                    </div>
+
+                    <div style="width: 1px; height: 24px; background: #cbd5e1; margin: 0 4px;"></div>
+                    
+                    <div class="input-group input-group-sm shadow-sm" style="width: 130px;">
+                        <span class="input-group-text bg-light text-muted">T0</span>
+                        <select class="form-select form-select-sm border-start-0" id="filterResult" onchange="applyFilters()">
+                            <option value="All">全部</option><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="NA">未測</option>
                         </select>
-                        <select class="form-select form-select-sm shadow-sm" id="filterProgress" onchange="applyFilters()" style="width: 150px; font-weight: 500;"><option value="All">RTV 狀態: 全部</option><option value="Not Started">未啟動 (Pending)</option><option value="In Progress">處理中 (Active)</option><option value="Closed">已結案 (Closed)</option></select>
+                    </div>
+                    
+                    <div class="input-group input-group-sm shadow-sm border-primary" style="width: 160px;">
+                        <span class="input-group-text bg-primary text-white border-primary">RTV狀態</span>
+                        <select class="form-select form-select-sm border-primary" id="filterProgress" onchange="applyFilters()" style="font-weight: bold;">
+                            <option value="All">全部</option><option value="Not Started">未啟動 (Pending)</option><option value="In Progress">處理中 (Active)</option><option value="Closed">已結案</option>
+                        </select>
                     </div>
                 </div>
 
@@ -500,6 +567,7 @@
 
                     <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">2. 材料與不良資訊 (Material & Failure Details)</h6>
                     <div class="row g-3 mb-4">
+                        <div class="col-md-2"><label class="form-label text-success">需求人員 (Req. From) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inReqFrom" placeholder="e.g. SQE"></div>
                         <div class="col-md-2"><label class="form-label">廠商 (Vendor) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inVendor" list="vendorList"><datalist id="vendorList"><option value="LITEON"><option value="DELTA"></datalist></div>
                         <div class="col-md-2"><label class="form-label">料號 (QPN) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inQPN" onblur="autoFillByQPN(this.value)"></div>
                         <div class="col-md-2"><label class="form-label">材料 (Parts) *</label><input type="text" class="form-control form-control-custom req-field draft-save" id="inParts"></div>
@@ -564,7 +632,7 @@
             </div>
             <div class="modal-body bg-light p-4">
                 <div class="row g-3 mb-3">
-                    <div class="col-md-3"><div class="card p-3 h-100 border-0 shadow-sm border-start border-4 border-primary"><div class="stat-label">QPN / Model</div><div class="fw-bold fs-6 text-dark mt-1" id="m-qpn">--</div><div class="text-muted small" id="m-model">--</div></div></div>
+                    <div class="col-md-3"><div class="card p-3 h-100 border-0 shadow-sm border-start border-4 border-primary"><div class="stat-label">QPN / Model / Vendor</div><div class="fw-bold fs-6 text-dark mt-1" id="m-qpn">--</div><div class="text-muted small mb-1" id="m-model">--</div><div class="fw-bold text-secondary small" id="m-vendor">--</div></div></div>
                     <div class="col-md-3"><div class="card p-3 h-100 border-0 shadow-sm border-start border-4 border-success"><div class="stat-label">SN List</div><div id="m-sn-list" class="small mt-1 text-dark fw-medium" style="max-height:60px; overflow-y:auto;"></div></div></div>
                     <div class="col-md-3"><div class="card p-3 h-100 border-0 shadow-sm border-start border-4 border-danger"><div class="stat-label text-danger">IQC Fail Desc.</div><div class="small mt-1 text-danger fw-medium" id="m-descIQC">--</div></div></div>
                     <div class="col-md-3"><div class="card p-3 h-100 border-0 shadow-sm border-start border-4 border-info"><div class="stat-label">Line Fail Desc.</div><div class="small mt-1 text-dark fw-medium" id="m-descLine">--</div></div></div>
@@ -624,8 +692,7 @@
                         </div>
                     </div>
                     
-                    <!-- 新增：QR Code 產生器容器 -->
-                    <div id="qrcode-container" class="mt-4 mb-2 d-flex justify-content-center"></div>
+                    <!-- 修正 1：移除意義不明的 QR Code 容器 -->
                     
                     <div class="text-center mt-3"><button id="btn-prev" class="btn btn-sm btn-link text-muted text-decoration-none" onclick="prevStep()" style="display:none;"><i class="fas fa-undo"></i> 管理員回退 (Admin Revert)</button></div>
                 </div>
@@ -696,6 +763,7 @@
         </div>
         <div class="row g-2 mb-3 bg-white p-3 rounded border">
             <h6 class="text-dark fw-bold w-100 border-bottom pb-2">材料與不良描述</h6>
+            <div class="col-md-2"><label class="form-label text-success">需求人員 (Req. From)</label><input type="text" class="form-control form-control-sm" id="edit-reqFrom"></div>
             <div class="col-md-2"><label class="form-label">Vendor</label><input type="text" class="form-control form-control-sm" id="edit-vendor"></div>
             <div class="col-md-2"><label class="form-label">QPN</label><input type="text" class="form-control form-control-sm" id="edit-qpn"></div>
             <div class="col-md-2"><label class="form-label">Parts</label><input type="text" class="form-control form-control-sm" id="edit-parts"></div>
@@ -782,6 +850,39 @@
     <div class="modal-footer border-top px-4 py-3 bg-light"><button type="button" class="btn btn-dark px-4" onclick="saveEmailConfig()">儲存設定 (Save Configuration)</button></div>
 </div></div></div>
 
+<!-- --- 【修復：補回遺失的懸浮 HUD、浮動工具列與逾期提醒 Modal】 --- -->
+<!-- 懸浮 HUD 容器 -->
+<div id="sn-hover-hud" class="sn-hud"></div>
+
+<!-- 浮動批次工具列 -->
+<div id="floating-batch-bar" class="floating-toolbar">
+    <span id="batch-sel-count" class="fw-bold text-warning" style="font-size: 0.95rem;">已選擇 0 筆單據</span>
+    <div style="width:1px; height:20px; background:rgba(255,255,255,0.2);"></div>
+    <button class="btn btn-sm btn-success fw-bold rounded-pill shadow-sm" onclick="batchAdvanceGrid()"><i class="fas fa-forward me-1"></i> 同步更新為下一階段</button>
+    <button class="btn btn-sm btn-light fw-bold rounded-pill text-dark shadow-sm" onclick="openMergeConfirmModal()"><i class="fas fa-object-group me-1"></i> 建立批次</button>
+</div>
+
+<!-- 逾期主動推播 Modal -->
+<div class="modal fade" id="overdueAlertModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border: 2px solid #ef4444;">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-exclamation-triangle me-2"></i>🚨 急件待辦提醒 (Action Required)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <p class="text-dark fw-bold mb-2">系統偵測到以下單據已超過 7 天未推進，請盡速處理：</p>
+                <ul class="list-group shadow-sm" id="overdue-alert-list" style="max-height: 250px; overflow-y:auto;">
+                    <!-- 動態載入 -->
+                </ul>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-danger w-100 fw-bold" data-bs-dismiss="modal" onclick="switchNav('logistics')">前往 Kanban 處理</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="printArea" style="display: none;"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -791,6 +892,15 @@
         if (!str) return '';
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
+
+    // --- 【新增：全域下拉選單觸發事件 (優化 UX)】 ---
+    window.selectFilter = function(inputId, val) {
+        let el = document.getElementById(inputId);
+        if (el) {
+            el.value = val;
+            applyFilters(); // 自動觸發資料過濾
+        }
+    };
 
     // --- 【修復：通用唯一識別碼 (UUID) 產生器，消除 ID 碰撞危機】 ---
     function generateUUID() {
@@ -951,9 +1061,6 @@
             const q = query(recordsCollectionRef, orderBy('id', 'desc'), limit(1000));
 
             onSnapshot(q, (snapshot) => {
-                // --- 【修復：終結廣播風暴與 UI 閃爍】 ---
-                // 若此變更是由本地端剛剛發起的 (尚未被伺服器完全 Ack)，則忽略這次的重複渲染
-                // 因為我們在拖拉或儲存時，早就已經手動更新本地 db 並重繪 UI 了！
                 if (snapshot.metadata.hasPendingWrites) return;
 
                 let hasChanges = false;
@@ -979,10 +1086,8 @@
                     db.sort((a, b) => b.id - a.id); 
                     localStorage.setItem('rtv_db', JSON.stringify(db));
                     if (document.getElementById('wrapper').style.display === 'flex') {
+                        populateFilters(); // 確保篩選選單有最新資料
                         applyFilters(false); 
-                        if(currentView === 'logistics') renderKanban();
-                        // --- 【修復 2：儀表板即時響應重繪】 ---
-                        if(currentView === 'dashboard') renderCharts(); 
                     }
                 }
                 isFirebaseReady = true;
@@ -1042,14 +1147,11 @@
     function isStepArrived(step, type) { return type === 'Courier' ? step === STEP_COURIER.ARRIVED : step === STEP_CARGO.ARRIVED; }
     function isStepFA(step, type) { return type === 'Courier' ? step === STEP_COURIER.FA : step === STEP_CARGO.FA; }
     
-    // --- 【修復：分離雙重人格變數】 ---
-    // currentView 專心管理大選單 (grid/logistics/dashboard)
-    // currentGridMode 專心管理列表模式 (list/batch)
-    let currentUserRole = '', currentUserVendor = '', currentDetailId = null, currentView = 'grid', currentGridMode = 'list';
+    // 修正：移除 currentUserVendor 變數，改用下拉選單的過濾器
+    let currentUserRole = '', currentDetailId = null, currentView = 'grid', currentGridMode = 'list';
     let charts = {};
     let pendingMode = null; 
 
-    // 修正：搜尋防抖機制 (Debounce)
     let searchTimeout;
     window.debounceSearch = function() {
         clearTimeout(searchTimeout);
@@ -1061,16 +1163,9 @@
     }
 
     function login() {
+        // 修正 2：移除特定廠商檢查，還原純淨的 Roles
         currentUserRole = document.getElementById('roleSelect').value;
-        // 抓取廠商名稱並轉為大寫，方便後續精準比對
-        currentUserVendor = document.getElementById('loginVendor') ? document.getElementById('loginVendor').value.trim().toUpperCase() : '';
-        
-        if (currentUserRole !== 'SuperAdmin' && !currentUserVendor) {
-            alert('請輸入您的所屬廠商或單位名稱 (Vendor Name)！');
-            return;
-        }
-
-        document.getElementById('displayRole').innerText = currentUserRole === 'SuperAdmin' ? 'System Admin' : `Engineer (${currentUserVendor})`;
+        document.getElementById('displayRole').innerText = currentUserRole === 'SuperAdmin' ? 'System Admin' : 'Engineer';
         
         if (currentUserRole !== 'SuperAdmin') {
             document.getElementById('nav-dashboard').style.display = 'none';
@@ -1084,12 +1179,40 @@
         document.getElementById('wrapper').style.display = 'flex';
         initLazyDefaults(); 
         loadConfigToUI(); 
+        populateFilters(); // 登入時先生成一次選項
         applyFilters();
-        if(currentView === 'logistics') renderKanban();
         initDraftAndPasteListener();
         document.getElementById('globalScanner').focus(); 
         
         setTimeout(checkOverdueAlert, 800);
+    }
+
+    // --- 【新增 3 & 4：動態生成下拉選單內容 (取代 datalist)】 ---
+    function populateFilters() {
+        let activeDb = db.filter(d => !d.isDeleted);
+        const populate = (inputId, key) => {
+            let ul = document.getElementById('dd' + inputId.charAt(0).toUpperCase() + inputId.slice(1));
+            if (!ul) return;
+            // 抓出資料庫該欄位所有的唯一值並排序
+            let uniqueVals = [...new Set(activeDb.map(item => item[key]).filter(v => v))].sort();
+            
+            // 預設加上一個清除選項
+            let optionsHtml = `<li><a class="dropdown-item text-muted fst-italic" href="#" onclick="event.preventDefault(); selectFilter('${inputId}', '')"><i class="fas fa-times me-2"></i>全部 (Clear)</a></li><li><hr class="dropdown-divider"></li>`;
+            
+            uniqueVals.forEach(v => {
+                // 將引號進行跳脫以防 JS 錯誤
+                let safeVal = escapeHTML(v).replace(/'/g, "\\'");
+                optionsHtml += `<li><a class="dropdown-item fw-bold text-dark" href="#" onclick="event.preventDefault(); selectFilter('${inputId}', '${safeVal}')">${escapeHTML(v)}</a></li>`;
+            });
+            ul.innerHTML = optionsHtml;
+        };
+        populate('filterFac', 'area');
+        populate('filterModel', 'model');
+        populate('filterStage', 'stage');
+        populate('filterParts', 'parts');
+        populate('filterVendor', 'vendor');
+        populate('filterDRI', 'iqcDRI'); 
+        populate('filterSN', 'sn');
     }
 
     function checkOverdueAlert() {
@@ -1117,9 +1240,14 @@
                     <span class="badge bg-danger rounded-pill fs-6">${Math.floor((new Date() - new Date(o.createdAt))/(86400000))} 天</span>
                 </li>
             `).join('');
-            document.getElementById('overdue-alert-list').innerHTML = listHtml;
-            let m = new bootstrap.Modal(document.getElementById('overdueAlertModal'));
-            m.show();
+            
+            // 加入安全防呆，確保元素存在才寫入
+            let listEl = document.getElementById('overdue-alert-list');
+            if (listEl) {
+                listEl.innerHTML = listHtml;
+                let m = new bootstrap.Modal(document.getElementById('overdueAlertModal'));
+                m.show();
+            }
         }
     }
 
@@ -1148,17 +1276,23 @@
         let count = 0;
         
         if (currentUserRole !== 'SuperAdmin') {
+            // Engineer 只提醒自己負責且尚未結案的
+            let filterDRIEl = document.getElementById('filterDRI');
+            let myDRI = filterDRIEl ? filterDRIEl.value.trim().toLowerCase() : '';
+            
             db.forEach(item => {
                 if (item.isDeleted || item.rtv !== 'Yes' || !item.rtvType) return;
                 
-                // 修正：只提示該廠商自己的單據
-                if (!item.vendor || item.vendor.toUpperCase() !== currentUserVendor) return;
+                // 【修復：移除殘留的 currentUserVendor 檢查，全面改用頂部篩選器邏輯】
+                
+                // 如果左上有篩選特定工程師 (包含模糊搜尋)，就只看該工程師的急件提醒
+                if (myDRI && myDRI !== 'all' && (!item.iqcDRI || !item.iqcDRI.toLowerCase().includes(myDRI))) return;
 
                 let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
                 if (item.step >= sArr.length) return; 
                 
                 let dri = getDRI(item.step, item.rtvType); 
-                if (currentUserRole === 'Engineer' && dri.includes('SQE')) count++;
+                if (dri.includes('SQE')) count++;
             });
         }
         
@@ -1194,9 +1328,9 @@
         if (viewId === 'grid') {
             document.getElementById('view-grid').style.display = 'block'; document.getElementById('topbar-title').innerText = '追蹤列表 (Tracking Grid)'; applyFilters();
         } else if (viewId === 'logistics') {
-            document.getElementById('view-logistics').style.display = 'block'; document.getElementById('topbar-title').innerText = '完整追蹤與物流 (Kanban Logistics)'; renderKanban();
+            document.getElementById('view-logistics').style.display = 'block'; document.getElementById('topbar-title').innerText = '完整追蹤與物流 (Kanban Logistics)'; applyFilters(); // Kanban 現在也受全域過濾
         } else if (viewId === 'dashboard') {
-            document.getElementById('view-dashboard').style.display = 'block'; document.getElementById('topbar-title').innerText = '數據分析 (Dashboard)'; renderCharts();
+            document.getElementById('view-dashboard').style.display = 'block'; document.getElementById('topbar-title').innerText = '數據分析 (Dashboard)'; applyFilters(); // Dashboard 現在也受全域過濾
         }
     }
 
@@ -1254,7 +1388,7 @@
         let item = db.find(d => String(d.id) === String(id)); 
         if(!item) return;
         let hud = document.getElementById('sn-hover-hud');
-        if(!hud) return; 
+        if(!hud) return; // 加入安全防呆
         
         let imgHtml = item.hasImg ? `<div style="height:120px; background:#f1f5f9; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#64748b; border: 1px dashed #cbd5e1;"><i class="fas fa-image fa-2x mb-1"></i><span style="font-size:0.7rem;">附有不良圖片</span></div>` : '';
         hud.innerHTML = `
@@ -1448,6 +1582,9 @@
         
         let lazyStage = localStorage.getItem('lazy_stage');
         if(lazyStage && document.getElementById('inStage')) document.getElementById('inStage').value = lazyStage;
+        
+        let lazyReqFrom = localStorage.getItem('lazy_reqFrom');
+        if(lazyReqFrom && document.getElementById('inReqFrom')) document.getElementById('inReqFrom').value = lazyReqFrom;
     }
 
     function fillLazyTestData() {
@@ -1463,6 +1600,7 @@
         document.getElementById('inRadar').value = '123' + r; 
         document.getElementById('inDescLine').value = 'System boot fail'; 
         document.getElementById('inDescIQC').value = 'IC burned'; 
+        document.getElementById('inReqFrom').value = 'SQE'; 
         
         document.getElementById('inT0Result').value = 'Fail'; 
         document.getElementById('inDefectF').value = '1'; 
@@ -1483,7 +1621,7 @@
         let activeDb = db.filter(d => !d.isDeleted);
         if(!activeDb || activeDb.length === 0) return showToast("提示", "目前沒有資料可匯出");
 
-        let headers = ["地區(Site)", "發生時間", "廠區(Factory)", "機種(Model)", "階段(Stage)", "IQC DRI", "廠商(Vendor)", "料號(QPN)", "材料(Parts)", "SN", "不良站點", "Radar", "產線描述", "IQC描述", "T0結果", "T1結果", "不良率", "復判人員", "外觀", "尺寸", "功能", "RTV狀態", "批次號", "物流方式", "快遞公司", "快遞單號", "預計抵達(ETA)", "實際抵達(ATA)", "建立日期"];
+        let headers = ["地區(Site)", "發生時間", "廠區(Factory)", "機種(Model)", "階段(Stage)", "IQC DRI", "需求人員(Req. From)", "廠商(Vendor)", "料號(QPN)", "材料(Parts)", "SN", "不良站點", "Radar", "產線描述", "IQC描述", "T0結果", "T1結果", "不良率", "復判人員", "外觀", "尺寸", "功能", "RTV狀態", "批次號", "物流方式", "快遞公司", "快遞單號", "預計抵達(ETA)", "實際抵達(ATA)", "建立日期"];
         
         let csvContent = "\uFEFF" + headers.join(',') + "\n"; 
 
@@ -1492,7 +1630,7 @@
             let formattedOccurTime = d.occurTime ? d.occurTime.replace('T', ' ') : '';
             
             let row = [
-                d.site, formattedOccurTime, d.area, d.model, d.stage, d.iqcDRI, d.vendor, d.qpn, d.parts, d.sn, d.failStation, d.radar, d.descLine, d.descIQC, d.t0Result, d.t1Result, d.defectRate, d.rev, d.resApp, d.resDim, d.resFunc, d.rtv, d.rtvBatchId || '', d.rtvType || '', d.courierComp || '', d.trackingNo || '', d.eta || '', d.ata || '', d.createdAt
+                d.site, formattedOccurTime, d.area, d.model, d.stage, d.iqcDRI, d.reqFrom || '', d.vendor, d.qpn, d.parts, d.sn, d.failStation, d.radar, d.descLine, d.descIQC, d.t0Result, d.t1Result, d.defectRate, d.rev, d.resApp, d.resDim, d.resFunc, d.rtv, d.rtvBatchId || '', d.rtvType || '', d.courierComp || '', d.trackingNo || '', d.eta || '', d.ata || '', d.createdAt
             ];
             
             let escapedRow = row.map(v => {
@@ -1593,7 +1731,7 @@
                 <td>${escapeHTML(item.defectRate)}</td><td style="white-space: pre-wrap;">${escapeHTML(item.sn)}</td>
                 <td>${escapeHTML(item.radar)}</td><td>${escapeHTML(item.failStation)}</td>
                 <td style="white-space: nowrap; text-align: left; line-height: 1.3;">${verifiedResult}</td><td>${escapeHTML(item.rev)}</td>
-                <td>${rtvDate}</td><td>SQE</td>
+                <td>${rtvDate}</td><td>${escapeHTML(item.reqFrom || 'SQE')}</td>
             </tr>`;
         }).join('');
 
@@ -1690,26 +1828,36 @@
         applyFilters(false);
     }
 
-    window.checkedRowIds = []; // 建立全域 Checkbox 狀態庫
+    window.checkedRowIds = []; 
 
-    function applyFilters(resetPage = true) {
-        // --- 【修復 2：防範 UI 狀態丟失 (State Wipe)】 ---
-        // 重新渲染前，先記憶目前被勾選的 Checkbox，存入全域變數
-        window.checkedRowIds = Array.from(document.querySelectorAll('.row-cb:checked')).map(cb => String(cb.value));
-
-        if (resetPage !== false) currentDisplayCount = 50;
+    // --- 【修正 3 & 4：全域資料獲取，集中套用所有進階條件 (升級模糊搜尋支援)】 ---
+    function getFilteredData() {
+        let fRes = document.getElementById('filterResult') ? document.getElementById('filterResult').value : 'All';
+        let fProg = document.getElementById('filterProgress') ? document.getElementById('filterProgress').value : 'All';
+        let search = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
+        let sDate = document.getElementById('filterStartDate') ? document.getElementById('filterStartDate').value : '';
+        let eDate = document.getElementById('filterEndDate') ? document.getElementById('filterEndDate').value : '';
         
-        let fRes = document.getElementById('filterResult').value;
-        let fProg = document.getElementById('filterProgress').value;
-        let search = document.getElementById('searchInput').value.toLowerCase();
-        let sDate = document.getElementById('filterStartDate').value;
-        let eDate = document.getElementById('filterEndDate').value;
+        // 抓取複合式輸入框的值並轉為小寫做模糊比對
+        let fFac = document.getElementById('filterFac') ? document.getElementById('filterFac').value.trim().toLowerCase() : '';
+        let fModel = document.getElementById('filterModel') ? document.getElementById('filterModel').value.trim().toLowerCase() : '';
+        let fStage = document.getElementById('filterStage') ? document.getElementById('filterStage').value.trim().toLowerCase() : '';
+        let fParts = document.getElementById('filterParts') ? document.getElementById('filterParts').value.trim().toLowerCase() : '';
+        let fVendor = document.getElementById('filterVendor') ? document.getElementById('filterVendor').value.trim().toLowerCase() : '';
+        let fDRI = document.getElementById('filterDRI') ? document.getElementById('filterDRI').value.trim().toLowerCase() : '';
+        let fSN = document.getElementById('filterSN') ? document.getElementById('filterSN').value.trim().toLowerCase() : '';
 
-        let filtered = db.filter(item => {
+        return db.filter(item => {
             if(item.isDeleted) return false; 
             
-            // 修正：Engineer 只能看自己維護的廠商單據
-            if(currentUserRole !== 'SuperAdmin' && (!item.vendor || item.vendor.toUpperCase() !== currentUserVendor)) return false;
+            // 套用全域下拉與輸入模糊搜尋條件 (包含)
+            if(fFac && (!item.area || !item.area.toLowerCase().includes(fFac))) return false;
+            if(fModel && (!item.model || !item.model.toLowerCase().includes(fModel))) return false;
+            if(fStage && (!item.stage || !item.stage.toLowerCase().includes(fStage))) return false;
+            if(fParts && (!item.parts || !item.parts.toLowerCase().includes(fParts))) return false;
+            if(fVendor && (!item.vendor || !item.vendor.toLowerCase().includes(fVendor))) return false;
+            if(fDRI && (!item.iqcDRI || !item.iqcDRI.toLowerCase().includes(fDRI))) return false;
+            if(fSN && (!item.sn || !item.sn.toLowerCase().includes(fSN))) return false;
             
             if(fRes !== 'All' && item.t0Result !== fRes) return false;
             
@@ -1728,37 +1876,45 @@
 
             return true;
         });
+    }
+
+    function applyFilters(resetPage = true) {
+        window.checkedRowIds = Array.from(document.querySelectorAll('.row-cb:checked')).map(cb => String(cb.value));
+
+        if (resetPage !== false) currentDisplayCount = 50;
+        
+        let filtered = getFilteredData();
 
         setElText('countAll', filtered.length);
         setElText('countInProgress', filtered.filter(d => d.rtv === 'Yes' && (!d.rtvType || d.step < (d.rtvType==='Cargo'?6:7))).length);
         setElText('countOverdue', filtered.filter(d => Math.floor((new Date() - new Date(d.createdAt))/(86400000)) > 7).length);
 
-        // --- 【修復：使用專屬的 currentGridMode 來判斷表格模式】 ---
         currentGridMode === 'list' ? renderListTable(filtered) : renderBatchTable(filtered);
         
-        // --- 【修復 2 續：渲染完畢後，把剛剛勾選的狀態補回去】 ---
         window.checkedRowIds.forEach(id => {
             let cb = document.querySelector(`.row-cb[value="${id}"]`);
             if(cb) cb.checked = true;
         });
-        handleRowCheck(); // 更新浮動工具列狀態
+        handleRowCheck(); 
 
         updateDRIReminder();
-        renderMobileList(); 
+        renderMobileList(filtered); 
+        
+        // 自動同步全域結果至 Kanban 與 Dashboard，達成大一統
+        if(currentView === 'logistics') renderKanban(filtered);
+        if(currentView === 'dashboard') renderCharts(filtered);
     }
 
-    // --- 【重構 DOM 節點緩存，優化效能】 ---
-    function renderMobileList() {
+    function renderMobileList(data) {
         let container = document.getElementById('mobile-task-list');
         if(!container) return;
         
-        let tasks = db.filter(item => {
-            if(item.isDeleted || item.rtv !== 'Yes') return false; 
+        if (!data) data = getFilteredData();
+
+        let tasks = data.filter(item => {
+            if(item.rtv !== 'Yes') return false; 
             let sArr = item.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
             if (item.step >= sArr.length) return false; 
-            
-            // 修正：Engineer 只能看自己維護的廠商單據
-            if(currentUserRole !== 'SuperAdmin' && (!item.vendor || item.vendor.toUpperCase() !== currentUserVendor)) return false;
             return true;
         });
 
@@ -1816,7 +1972,6 @@
     }
 
     function toggleView(mode) {
-        // --- 【修復：使用專屬的 currentGridMode，不再挾持 currentView】 ---
         currentGridMode = mode; 
         let la = document.getElementById('listActions'); if(la) la.style.visibility = (mode === 'list' ? 'visible' : 'hidden');
         let mt = document.getElementById('mainTable'); if(mt) mt.className = mode === 'list' ? 'table table-enterprise table-hover align-middle table-list-view' : 'table table-enterprise table-hover align-middle'; 
@@ -1826,18 +1981,26 @@
     function renderListTable(data) {
         let thead = `<tr>
             <th class="sticky-col-1"><input type="checkbox" id="checkAll" onclick="toggleAll()"></th>
-            <th class="sticky-col-2">廠區 (Factory)</th><th class="sticky-col-3">料號 (QPN)</th><th class="sticky-col-4">材料 (Parts)</th><th class="sticky-col-5">序號 (SN)</th><th class="sticky-col-6">階段 (Stage)</th>
+            <th class="sticky-col-2" style="white-space: normal; line-height: 1.2;">廠區<br>(Fac.)</th>
+            <th class="sticky-col-3" style="white-space: normal; line-height: 1.2;">料號<br>(QPN)</th>
+            <th class="sticky-col-4">材料 (Parts)</th>
+            <th class="sticky-col-5" style="white-space: normal; line-height: 1.2;">廠商<br>(Vendor)</th>
+            <th class="sticky-col-6" style="white-space: normal; line-height: 1.2;">機種<br>(Model)</th>
+            <th class="sticky-col-7" style="white-space: normal; line-height: 1.2;">階段<br>(Stage)</th>
+            <th class="sticky-col-8" style="white-space: normal; line-height: 1.2;">序號<br>(SN)</th>
+            <th class="sticky-col-9">操作管理 (Actions)</th>
             <th>T0 / T1 結果</th><th>物流進度 (Logistics Progress)</th><th>RTV 狀態 (Status)</th>
-            <th>滯留 (DDD)</th><th>操作管理 (Actions)</th>
-            <th>地區 (Site)</th><th>日期 (Date)</th><th>機種 (Model)</th><th>IQC (DRI)</th><th>廠商 (Vendor)</th>
+            <th>滯留 (DDD)</th>
+            <th>日期 (Date)</th><th>IQC (DRI)</th>
             <th>不良站點 (Station)</th><th>Radar://</th><th>不良率 (Defect%)</th><th>復判 (Rev.)</th>
-            <th>外觀 (Cos.)</th><th>尺寸 (Dim.)</th><th>功能 (Func.)</th><th>產線描述 (Line)</th><th>IQC描述 (IQC)</th><th>圖片 (Img)</th>
+            <th>外觀 (Cos.)</th><th>尺寸 (Dim.)</th><th>功能 (Func.)</th><th>產線描述 (Line)</th><th>IQC描述 (IQC)</th>
+            <th style="white-space: normal; line-height: 1.2;" class="text-success">需求人員<br>(Req. From)</th>
         </tr>`;
         let thEl = document.getElementById('tableHead'); if(thEl) thEl.innerHTML = thead; 
         let tbody = document.getElementById('tableBody'); if(tbody) tbody.innerHTML = ''; else return;
         
         let renderData = data.slice(0, currentDisplayCount);
-        let htmlBuffer = []; // [修復] 補上缺漏的 htmlBuffer 陣列宣告
+        let htmlBuffer = []; 
         
         renderData.forEach(item => {
             let pIcon = item.priority ? `<i class="fas fa-exclamation-circle priority-high"></i> ` : '';
@@ -1882,35 +2045,41 @@
             let tResultHtml = `T0: ${formatBadge(item.t0Result)}`;
             if (item.t1Result) tResultHtml += `<br>T1: ${formatBadge(item.t1Result)}`;
 
-            // --- 【修復 5：加入「脫隊 (Orphaned)」視覺提示】 ---
             let orphanBadge = item.isOrphaned ? `<span class="badge bg-secondary text-white ms-1 shadow-sm" style="font-size:0.65rem;" title="曾經在批次中，後被獨立拆出">脫隊追蹤</span>` : '';
 
-            // --- 【修復 2 續：直接在 HTML 字串拼接時把 checked 屬性加回去，最穩固的做法】 ---
             let isChecked = window.checkedRowIds && window.checkedRowIds.includes(String(item.id)) ? 'checked' : '';
 
             htmlBuffer.push(`<tr>
                 <td class="sticky-col-1"><input type="checkbox" class="row-cb form-check-input" value="${item.id}" ${isChecked} onchange="handleRowCheck()"></td>
-                <td class="sticky-col-2 fw-medium">${escapeHTML(item.area)}</td><td class="sticky-col-3">${pIcon}<b class="text-main">${escapeHTML(item.qpn)}</b></td>
-                <td class="sticky-col-4">${escapeHTML(item.parts)}</td><td class="sticky-col-5 sn-hover fw-bold text-primary" onmouseenter="showHUD(event, '${item.id}')" onmouseleave="hideHUD()">${escapeHTML(item.sn)}${orphanBadge}</td><td class="sticky-col-6">${escapeHTML(item.stage)}</td>
+                <td class="sticky-col-2 fw-medium" style="white-space: normal; line-height: 1.2;" title="${escapeHTML(item.site)} ${escapeHTML(item.area)}">${escapeHTML(item.site)}<br>${escapeHTML(item.area)}</td>
+                <td class="sticky-col-3" title="${escapeHTML(item.qpn)}">${pIcon}<b class="text-main">${escapeHTML(item.qpn)}</b></td>
+                <td class="sticky-col-4">${escapeHTML(item.parts)}</td>
+                <td class="sticky-col-5 fw-bold" title="${escapeHTML(item.vendor)}">${escapeHTML(item.vendor)}</td>
+                <td class="sticky-col-6" title="${escapeHTML(item.model)}">${escapeHTML(item.model)}</td>
+                <td class="sticky-col-7" title="${escapeHTML(item.stage)}">${escapeHTML(item.stage)}</td>
+                <td class="sticky-col-8 sn-hover fw-bold text-primary" onmouseenter="showHUD(event, '${item.id}')" onmouseleave="hideHUD()" title="${escapeHTML(item.sn)}">${escapeHTML(item.sn)}${orphanBadge}</td>
+                <td class="sticky-col-9">${actionBtns}</td>
                 <td>${tResultHtml}</td><td>${progressHtml}</td><td>${rtvSelect}</td><td class="${dddCls} fw-bold">${ddd}d</td>
-                <td style="min-width: 140px;">${actionBtns}</td>
-                <td>${escapeHTML(item.site)}</td><td>${item.occurTime ? item.occurTime.split('T')[0] : '-'}</td><td>${escapeHTML(item.model)}</td><td>${escapeHTML(item.iqcDRI)}</td><td class="fw-bold">${escapeHTML(item.vendor)}</td>
-            <td>${escapeHTML(item.failStation)}</td>
-            <td><span class="badge-radar" onclick="copyRadar('${escapeHTML(item.radar)}')" title="點擊複製"><i class="fas fa-link"></i>Radar://${escapeHTML(item.radar)}</span></td>
-            <td class="fw-bold text-primary">${escapeHTML(item.defectRate) || '-'}</td><td>${escapeHTML(item.rev)}</td>
+                <td>${item.occurTime ? item.occurTime.split('T')[0] : '-'}</td><td>${escapeHTML(item.iqcDRI)}</td>
+                <td>${escapeHTML(item.failStation)}</td>
+                <td style="white-space: nowrap;">
+                    <span class="badge-radar me-1" onclick="copyRadar('${escapeHTML(item.radar)}')" title="點擊複製"><i class="fas fa-link"></i>Radar://${escapeHTML(item.radar)}</span>
+                    <button class="btn btn-sm btn-light border p-1 text-primary shadow-sm" onclick="editRadar('${item.id}')" title="編輯 / 補填 Radar" style="line-height: 1; border-radius: 4px;"><i class="fas fa-edit"></i></button>
+                </td>
+                <td class="fw-bold text-primary">${escapeHTML(item.defectRate) || '-'}</td><td>${escapeHTML(item.rev)}</td>
                 <td>${formatBadge(item.resApp)}</td><td>${formatBadge(item.resDim)}</td><td>${formatBadge(item.resFunc)}</td>
                 <td class="text-dark small" style="max-width:120px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHTML(item.descLine)}">${escapeHTML(item.descLine)}</td>
                 <td class="text-danger small" style="max-width:120px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHTML(item.descIQC)}">${escapeHTML(item.descIQC)}</td>
-                <td class="text-center">${imgIcon}</td>
+                <td class="fw-bold text-success">${escapeHTML(item.reqFrom || '-')}</td>
             </tr>`);
         });
         
         let bottomBtn = '';
         if (data.length > currentDisplayCount) {
-            bottomBtn = `<tr><td colspan="26" class="text-center py-3 bg-light"><button class="btn btn-outline-primary rounded-pill fw-bold px-4 shadow-sm" onclick="loadMoreList()">展開更多資料 (Load More) <i class="fas fa-chevron-down ms-1"></i></button></td></tr>`;
+            bottomBtn = `<tr><td colspan="25" class="text-center py-3 bg-light"><button class="btn btn-outline-primary rounded-pill fw-bold px-4 shadow-sm" onclick="loadMoreList()">展開更多資料 (Load More) <i class="fas fa-chevron-down ms-1"></i></button></td></tr>`;
         } else if (data.length > 0 && currentDisplayCount >= 50) {
             // --- 【修復：破解假分頁幻覺，給予明確的系統邊界提示】 ---
-            bottomBtn = `<tr><td colspan="26" class="text-center py-3 text-muted small bg-light">已顯示本機快取的 ${data.length} 筆資料。若需查詢更早期的單據，請使用上方「掃碼 / 搜尋」功能。</td></tr>`;
+            bottomBtn = `<tr><td colspan="25" class="text-center py-3 text-muted small bg-light">已顯示本機快取的 ${data.length} 筆資料。若需查詢更早期的單據，請使用上方「掃碼 / 搜尋」功能。</td></tr>`;
         }
         
         tbody.innerHTML = htmlBuffer.join('') + bottomBtn;
@@ -1918,7 +2087,7 @@
 
     function renderBatchTable(data) {
         let thEl = document.getElementById('tableHead'); 
-        if(thEl) thEl.innerHTML = `<tr><th width="30"></th><th>批次 (Batch)</th><th>廠商 (Vendor)</th><th>數量 (Qty)</th><th>物流 (Mode)</th><th>進度 (Progress)</th><th>操作 (Action)</th></tr>`;
+        if(thEl) thEl.innerHTML = `<tr><th width="30"></th><th>批次 (Batch)</th><th style="white-space: normal; line-height: 1.2;">廠商<br>(Vendor)</th><th>數量 (Qty)</th><th>物流 (Mode)</th><th>進度 (Progress)</th><th>操作 (Action)</th></tr>`;
         let tbody = document.getElementById('tableBody'); if(tbody) tbody.innerHTML = ''; else return;
         let batches = {}; data.forEach(d => { if(d.isDeleted || d.rtv !== 'Yes') return; let k = d.rtvBatchId || d.trackingNo || '未群組 (Unbatched)'; if(!batches[k]) batches[k] = []; batches[k].push(d); });
         
@@ -1948,17 +2117,12 @@
         }
     }
 
-    function renderKanban() {
+    function renderKanban(data) {
+        if (!data) data = getFilteredData();
         let counts = [0, 0, 0, 0];
         let colsHtml = ["", "", "", ""];
 
-        db.filter(d => {
-            if(d.isDeleted || d.rtv !== 'Yes') return false;
-            
-            // 修正：Engineer 只能看自己維護的廠商單據
-            if(currentUserRole !== 'SuperAdmin' && (!d.vendor || d.vendor.toUpperCase() !== currentUserVendor)) return false;
-            return true;
-        }).forEach(item => {
+        data.filter(d => d.rtv === 'Yes').forEach(item => {
             let colIdx = 0; 
             let sArr = [];
             if (item.rtvType) {
@@ -2133,13 +2297,14 @@
 
         await Promise.all(promises);
         saveDB();
-        renderKanban();
+        applyFilters(false); // Kanban 重新渲染交由 applyFilters 統一指揮
         hideLoading();
         showToast("批量成功", `已成功推進 ${itemsInCol.length} 筆資料！`);
     }
 
-    function renderCharts() {
-        let activeDb = db.filter(d => !d.isDeleted && (currentUserRole === 'SuperAdmin' || (d.vendor && d.vendor.toUpperCase() === currentUserVendor)));
+    function renderCharts(data) {
+        if (!data) data = getFilteredData();
+        let activeDb = data;
         ['chartDDD', 'chartVendor', 'chartModel', 'chartMaterial', 'chartMonthly', 'chartYearly', 'chartStation'].forEach(id => { 
             if(charts[id]) charts[id].destroy(); 
         });
@@ -2208,6 +2373,7 @@
         let inIqcDRI = document.getElementById('inIqcDRI'); if(inIqcDRI) localStorage.setItem('lazy_iqcDRI', inIqcDRI.value);
         let inModel = document.getElementById('inModel'); if(inModel) localStorage.setItem('lazy_model', inModel.value);
         let inStage = document.getElementById('inStage'); if(inStage) localStorage.setItem('lazy_stage', inStage.value);
+        let inReqFrom = document.getElementById('inReqFrom'); if(inReqFrom) localStorage.setItem('lazy_reqFrom', inReqFrom.value);
         
         let fVal = document.getElementById('inDefectF') ? document.getElementById('inDefectF').value : '';
         let tVal = document.getElementById('inDefectT') ? document.getElementById('inDefectT').value : '';
@@ -2235,6 +2401,7 @@
             model: document.getElementById('inModel') ? document.getElementById('inModel').value : '', 
             stage: document.getElementById('inStage') ? document.getElementById('inStage').value : '', 
             iqcDRI: inIqcDRI ? inIqcDRI.value : '', 
+            reqFrom: inReqFrom ? inReqFrom.value : 'SQE', 
             vendor: inVendorVal, 
             qpn: inQPNVal, 
             parts: document.getElementById('inParts') ? document.getElementById('inParts').value : '', 
@@ -2523,6 +2690,7 @@
 
         setElText('m-qpn', item.qpn); 
         setElText('m-model', item.model); 
+        setElText('m-vendor', item.vendor); 
         setElText('m-descIQC', item.descIQC); 
         setElText('m-descLine', item.descLine);
         
@@ -2554,17 +2722,8 @@
         
         updateETA(item);
 
-        let qrContainer = document.getElementById("qrcode-container");
-        if(qrContainer) {
-            qrContainer.innerHTML = "";
-            let qrText = item.radar ? `Radar://${item.radar}` : `SN:${item.sn}`;
-            new QRCode(qrContainer, {
-                text: qrText,
-                width: 100, height: 100,
-                colorDark : "#4338ca", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H
-            });
-        }
-
+        // 修正 1：徹底移除 Modal 內的 QR Code 生成機制
+        
         let syncBtn = document.getElementById('btn-api-sync');
         if(syncBtn) {
             if (item.rtvType === 'Courier' && item.step > 0 && item.step < 5 && item.trackingNo) {
@@ -3198,7 +3357,7 @@
             Promise.all(promises).then(() => {
                 saveDB();
                 openRTVModal(t.id); 
-                if(currentView === 'logistics') renderKanban(); else applyFilters(false); 
+                applyFilters(false); // 統一重繪指揮
                 hideLoading();
             });
         } 
@@ -3275,6 +3434,7 @@
         document.getElementById('edit-model').value = d.model || '';
         document.getElementById('edit-stage').value = d.stage || '';
         document.getElementById('edit-iqcDRI').value = d.iqcDRI || '';
+        document.getElementById('edit-reqFrom').value = d.reqFrom || '';
 
         document.getElementById('edit-vendor').value = d.vendor || '';
         document.getElementById('edit-qpn').value = d.qpn || '';
@@ -3366,6 +3526,7 @@
             model: document.getElementById('edit-model').value,
             stage: document.getElementById('edit-stage').value,
             iqcDRI: document.getElementById('edit-iqcDRI').value,
+            reqFrom: document.getElementById('edit-reqFrom').value,
             vendor: editVendorVal,
             qpn: editQPNVal,
             parts: document.getElementById('edit-parts').value,
@@ -3444,6 +3605,33 @@
         addLog(d, currentUserRole, "Super Admin 修改資料 (Edited)."); 
         hideLoading();
         showToast("更新成功", "資料已成功局部更新，不會影響物流進度。");
+    }
+
+    // --- 【新增：專屬 Radar 快速更新功能】 ---
+    window.editRadar = async function(id) {
+        let item = db.find(d => String(d.id) === String(id));
+        if (!item) return;
+
+        let newRadar = prompt(`請輸入新的 Radar:// 連結或號碼\n(目前: ${item.radar || '無'})`, item.radar || '');
+        
+        // 如果使用者按取消，或是沒有改變內容，則不動作
+        if (newRadar === null) return; 
+        newRadar = newRadar.trim();
+        if (newRadar === item.radar) return;
+
+        showLoading();
+        item.radar = newRadar;
+        addLog(item, currentUserRole, `[更新] Radar 補填/修改為: ${newRadar}`);
+
+        // 呼叫專屬局部更新，不影響其他狀態
+        if (isFirebaseReady) {
+            await updateItemInCloud(item.id, { radar: newRadar });
+        }
+        saveDB();
+
+        hideLoading();
+        applyFilters(false);
+        showToast("更新成功", `Radar:// 已更新為 ${newRadar}`, 3000);
     }
 </script>
 </body>
