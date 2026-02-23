@@ -20,6 +20,11 @@
 
         body { background-color: var(--bg-canvas); font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; color: var(--text-main); overflow-x: hidden; }
 
+        /* --- 全域 Loading 與 Lightbox --- */
+        #global-loader { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.7); z-index: 1060; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        [data-theme="dark"] #global-loader { background: rgba(15,23,42,0.8); }
+        .spinner-border { width: 3rem; height: 3rem; color: var(--brand-primary); }
+
         /* --- 登入畫面 --- */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--sidebar-bg) 0%, var(--brand-primary) 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; }
         .login-card { background: white; padding: 3rem; border-radius: 12px; width: 450px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
@@ -82,6 +87,15 @@
         .bg-pass { background-color: #dcfce7; color: #166534; } .bg-fail { background-color: #fee2e2; color: #991b1b; } .bg-intermittent { background-color: #fef9c3; color: #854d0e; } .bg-pending { background-color: #f1f5f9; color: #475569; } .bg-processing { background-color: #dbeafe; color: #1e40af; }
         .priority-high { color: #ef4444; font-weight: bold; } .ddd-overdue { color: #ef4444; font-weight: 700; } .ddd-warning { color: #f59e0b; font-weight: 600; } .ddd-normal { color: #10b981; }
         
+        /* 支援暗黑模式的表格與卡片反轉 */
+        [data-theme="dark"] .table-enterprise tbody td { background-color: var(--card-bg) !important; color: var(--text-main); }
+        [data-theme="dark"] .table-enterprise thead th { background-color: #0f172a !important; color: #94a3b8; border-bottom: 1px solid #334155; }
+        [data-theme="dark"] .table-enterprise tbody tr:hover td { background-color: #1e293b !important; }
+        [data-theme="dark"] .bg-white { background-color: var(--card-bg) !important; color: var(--text-main); border-color: var(--border-color) !important; }
+        [data-theme="dark"] .bg-light { background-color: #0f172a !important; color: var(--text-main); }
+        [data-theme="dark"] .modal-content, [data-theme="dark"] .offcanvas { background-color: var(--card-bg); color: var(--text-main); border-color: var(--border-color); }
+        [data-theme="dark"] .modal-header-custom, [data-theme="dark"] .offcanvas-header { background-color: #0f172a; border-bottom: 1px solid #334155; }
+
         /* 支援可點擊的 Radar Badge */
         .badge-radar { background-color: #fdf4ff; color: #d946ef; border: 1px solid #f0abfc; padding: 4px 8px; border-radius: 6px; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-weight: 700; font-size: 0.8rem; white-space: nowrap; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center;}
         .badge-radar:hover { background-color: #fae8ff; box-shadow: 0 2px 4px rgba(217, 70, 239, 0.2); }
@@ -159,7 +173,16 @@
         .mobile-only-flex { display: none !important; }
         #view-mobile { display: none; }
         
+        /* 加入 FAB 樣式 (Phase 3.1: 行動端新增按鈕) */
+        .mobile-fab {
+            display: none; position: fixed; bottom: 20px; right: 20px;
+            width: 60px; height: 60px; border-radius: 50%; background: var(--brand-primary);
+            color: white; font-size: 24px; text-align: center; line-height: 60px;
+            box-shadow: 0 4px 10px rgba(67, 56, 202, 0.4); z-index: 1050; cursor: pointer;
+        }
+
         @media (max-width: 768px) {
+            .mobile-fab { display: block; } /* 只有手機版顯示 */
             /* 1. 暴力隱藏所有非手機元素（確保畫面絕對清爽） */
             #sidebar,
             #view-grid,
@@ -219,6 +242,20 @@
 </head>
 <body>
 
+<div id="global-loader"><div class="spinner-border" role="status"></div></div>
+
+<!-- Lightbox Modal (Phase 4.1) -->
+<div class="modal fade" id="lightboxModal" tabindex="-1" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content bg-transparent border-0 shadow-none">
+            <div class="modal-body text-center position-relative p-0">
+                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" style="filter: invert(1); z-index: 2;"></button>
+                <img id="lightboxImage" src="" class="img-fluid rounded shadow-lg" style="max-height: 90vh; object-fit: contain;">
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 
 <div id="login-screen">
@@ -228,12 +265,17 @@
             <h3 class="fw-bold text-dark" style="font-size: 1.5rem;">Materials Rejudge Tracking System</h3>
             <p class="text-muted small">Global Logistics & Traceability Platform</p>
         </div>
-        <div class="mb-4 text-start">
+        <div class="mb-3 text-start">
             <label class="form-label">登入身份 (Role Authorization)</label>
-            <select id="roleSelect" class="form-select form-select-custom form-select-lg">
+            <select id="roleSelect" class="form-select form-select-custom form-select-lg" onchange="document.getElementById('loginVendorDiv').style.display = this.value === 'SuperAdmin' ? 'none' : 'block';">
                 <option value="SuperAdmin">系統管理員 (Super Admin)</option>
-                <option value="Engineer">工程師 (Engineer)</option>
+                <option value="Engineer">工程師 / 廠商 (Engineer / Vendor)</option>
             </select>
+        </div>
+        <!-- 修正：加入廠商輸入框，讓工程師過濾自己的單據 -->
+        <div class="mb-4 text-start" id="loginVendorDiv" style="display:none;">
+            <label class="form-label text-danger">所屬廠商 (Vendor Name) *</label>
+            <input type="text" id="loginVendor" class="form-control form-control-custom form-control-lg" placeholder="例如: LITEON, DELTA...">
         </div>
         <button class="btn btn-brand w-100 btn-lg rounded-3 fw-bold shadow-sm" onclick="login()">Enter Workspace <i class="fas fa-arrow-right ms-2"></i></button>
     </div>
@@ -281,7 +323,8 @@
                 </div>
                 <div class="input-group desktop-only-flex" style="width: 180px;">
                     <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0 bg-light" placeholder="Search..." id="searchInput" onkeyup="applyFilters()">
+                    <!-- 修正：加入防抖機制 (Debounce) -->
+                    <input type="text" class="form-control border-start-0 bg-light" placeholder="Search..." id="searchInput" onkeyup="debounceSearch()">
                 </div>
                 <!-- 桌機版登出按鈕 -->
                 <button class="btn btn-light border rounded-circle desktop-only-flex shadow-sm" onclick="location.reload()" title="登出 (Logout)"><i class="fas fa-sign-out-alt text-danger"></i></button>
@@ -322,6 +365,7 @@
                     <div class="d-flex gap-2" id="listActions">
                         <button class="btn btn-sm btn-outline-primary fw-bold shadow-sm" onclick="openMergeConfirmModal()"><i class="fas fa-object-group"></i> 建立批次 (Create Batch)</button>
                         <button class="btn btn-sm btn-outline-danger shadow-sm" onclick="deleteSelected()"><i class="fas fa-trash"></i> 刪除 (Delete)</button>
+                        <button class="btn btn-sm btn-outline-info fw-bold shadow-sm" onclick="generateRTVEML()" style="color: #0c5460;"><i class="fas fa-envelope text-info me-1"></i> 產生 RTV 郵件</button>
                     </div>
                     <div class="d-flex gap-2 align-items-center">
                         <div class="btn-group shadow-sm" role="group">
@@ -579,6 +623,10 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- 新增：QR Code 產生器容器 -->
+                    <div id="qrcode-container" class="mt-4 mb-2 d-flex justify-content-center"></div>
+                    
                     <div class="text-center mt-3"><button id="btn-prev" class="btn btn-sm btn-link text-muted text-decoration-none" onclick="prevStep()" style="display:none;"><i class="fas fa-undo"></i> 管理員回退 (Admin Revert)</button></div>
                 </div>
 
@@ -682,11 +730,19 @@
             <div class="col-md-2"><label class="form-label">外觀 (Cos.)</label><select class="form-select form-select-sm" id="edit-resApp"><option value="">無</option><option value="OK">OK</option><option value="NG">NG</option></select></div>
             <div class="col-md-2"><label class="form-label">尺寸 (Dim.)</label><select class="form-select form-select-sm" id="edit-resDim"><option value="">無</option><option value="OK">OK</option><option value="OOS">OOS</option><option value="NG">NG</option><option value="NA">NA</option></select></div>
             <div class="col-md-2"><label class="form-label">功能 (Func.)</label><select class="form-select form-select-sm" id="edit-resFunc"><option value="">無</option><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="Not Test">Not Test</option><option value="Intermittent">Intermittent</option></select></div>
+            <!-- --- 【修復 3：新增離線遺失圖片的補傳按鈕】 --- -->
+            <div class="col-md-6 mt-3"><label class="form-label"><i class="fas fa-image text-muted"></i> 補傳/更新 產線圖片 (Image Recovery)</label><input type="file" class="form-control form-control-sm" id="edit-imgLine" accept="image/*"></div>
+            <div class="col-md-6 mt-3"><label class="form-label"><i class="fas fa-image text-muted"></i> 補傳/更新 IQC 圖片 (Image Recovery)</label><input type="file" class="form-control form-control-sm" id="edit-imgIQC" accept="image/*"></div>
         </div>
         <div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" id="edit-priority"><label class="form-check-label text-danger fw-bold ms-2" for="edit-priority">標記為急件 (High Priority)</label></div>
     </div>
     <div class="modal-footer border-0 bg-light"><button type="button" class="btn btn-warning fw-bold px-4" onclick="saveEdit()">強制更新儲存 (Force Save)</button></div>
 </div></div></div>
+
+<!-- 手機版專屬新增按鈕 FAB -->
+<div class="mobile-fab" onclick="openAddModal()">
+    <i class="fas fa-plus"></i>
+</div>
 
 <!-- Expanded Settings Modal -->
 <div class="modal fade" id="settingsModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
@@ -715,7 +771,7 @@
                     <div class="col-12">
                         <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" checked><label class="form-check-label text-dark">啟用快遞 API 自動同步 (Enable Auto API Sync)</label></div>
                         <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" checked><label class="form-check-label text-dark">物流到達後自動觸發 FA 分析計時 (Auto trigger FA Timer)</label></div>
-                        <div class="form-check form-switch mb-4"><input class="form-check-input" type="checkbox"><label class="form-check-label text-dark">預設啟用暗黑模式 (Dark Mode Default) - <span class="text-muted small">即將推出</span></label></div>
+                        <div class="form-check form-switch mb-4"><input class="form-check-input" type="checkbox" id="cfg-darkmode"><label class="form-check-label text-dark">預設啟用暗黑模式 (Dark Mode Default)</label></div>
                     </div>
                     <div class="col-md-6"><label class="form-label text-dark">已結案資料保留天數 (Archive Retention Days)</label><select class="form-select form-select-custom"><option>30 天</option><option selected>90 天</option><option>180 天</option><option>永久保留</option></select></div>
                     <div class="col-md-6"><label class="form-label text-dark">登入預設視圖 (Default Landing View)</label><select class="form-select form-select-custom"><option>追蹤列表 (Grid)</option><option selected>完整追蹤 Kanban (Logistics)</option><option>數據分析 (Dashboard)</option></select></div>
@@ -730,7 +786,49 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // --- 資料庫初始化 (升級為雲端即時同步架構) ---
+    // --- XSS 防護函式 ---
+    function escapeHTML(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // --- 【修復：通用唯一識別碼 (UUID) 產生器，消除 ID 碰撞危機】 ---
+    function generateUUID() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return Date.now().toString(36) + Math.random().toString(36).substring(2);
+    }
+
+    // --- 【修復 1：時區轉換輔助函式 (解決 UTC 導致日期少一天的問題)】 ---
+    function getLocalDateString(d = new Date()) {
+        let tzOffset = d.getTimezoneOffset() * 60000;
+        return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
+    }
+
+    function getLocalIsoDateTime(d = new Date()) {
+        let tzOffset = d.getTimezoneOffset() * 60000;
+        return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+    }
+
+    // --- Loading UI 控制 ---
+    function showLoading() { document.getElementById('global-loader').style.display = 'flex'; }
+    function hideLoading() { document.getElementById('global-loader').style.display = 'none'; }
+
+    // --- Lightbox 控制 ---
+    window.openLightbox = function(src) {
+        document.getElementById('lightboxImage').src = src;
+        new bootstrap.Modal(document.getElementById('lightboxModal')).show();
+    }
+
+    // --- 判斷是否結案 (Phase 2.1) ---
+    function isItemClosed(item) {
+        if (item.rtv !== 'Yes') return false;
+        let sArr = item.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
+        return item.rtvType ? item.step >= sArr.length : false;
+    }
+
+    // --- 資料庫初始化 ---
     let defaultData = [
         { id: 1, priority: true, site: 'QSMC', occurTime: '2023-11-01T08:00', area: 'F1', model: 'J81a', stage: 'PVT', iqcDRI: 'Alex', vendor: 'LITEON', qpn: 'AA130WQ1000', parts: 'IC', sn: 'SN-001', failStation: 'FATP', radar: '1234567', descLine: 'No Power on mainboard', descIQC: 'Pin broken', t0Result: 'Fail', t1Result: '', defectRate: '1F/50T=2%', rev: 'Tom FAE', resApp: 'NG', resDim: 'OK', resFunc: 'Not Test', hasImg: true, rtv: 'Yes', rtvBatchId: 'Batch-1001', rtvType: 'Courier', courierComp: '順豐', trackingNo: 'SF999999999', step: 3, cargoSubStep: '', eta: '2023-11-08', ata: '', delayStatus: '', timestamps: ['2023-11-01T10:00','2023-11-02T10:00','2023-11-03T10:00','2023-11-04T10:00'], createdAt: '2023-11-01', logs: [], comments: [] },
         { id: 2, priority: false, site: 'QCMT', occurTime: '2023-11-20T09:00', area: 'F2', model: 'M2', stage: 'EVT', iqcDRI: 'Bob', vendor: 'DELTA', qpn: 'BB550XD2000', parts: 'Resistor', sn: 'SN-002', failStation: 'CR', radar: '4567890', descLine: 'Scratch', descIQC: 'Scratch confirmed', t0Result: 'Pass', t1Result: 'Pass', defectRate: '0F/100T=0%', rev: 'Jerry FAE', resApp: 'OK', resDim: 'OK', resFunc: 'Pass', hasImg: false, rtv: 'No', rtvBatchId: null, rtvType: '', courierComp: '', trackingNo: '', step: 0, cargoSubStep: '', eta: '', ata: '', delayStatus: '', timestamps: [], createdAt: '2023-11-25', logs: [], comments: [] }
@@ -738,19 +836,84 @@
 
     let db = JSON.parse(localStorage.getItem('rtv_db')) || defaultData;
     
+    // --- 【系統設定全域變數綁定】 ---
+    let sysConfig = JSON.parse(localStorage.getItem('rtv_config')) || {
+        etaDays: 7,
+        mailGroup: "BU6_IQC@quantacn.com; QMH_IQC@quantacn.com",
+        dddWarning: 3,
+        dddOverdue: 7,
+        darkMode: false
+    };
+
+    function toggleDarkMode(isDark) {
+        if (isDark) {
+            document.documentElement.style.setProperty('--bg-canvas', '#0f172a');
+            document.documentElement.style.setProperty('--card-bg', '#1e293b');
+            document.documentElement.style.setProperty('--text-main', '#e2e8f0');
+            document.documentElement.style.setProperty('--text-muted', '#94a3b8');
+            document.documentElement.style.setProperty('--border-color', '#334155');
+            document.body.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.style.setProperty('--bg-canvas', '#f1f5f9');
+            document.documentElement.style.setProperty('--card-bg', '#ffffff');
+            document.documentElement.style.setProperty('--text-main', '#334155');
+            document.documentElement.style.setProperty('--text-muted', '#64748b');
+            document.documentElement.style.setProperty('--border-color', '#e2e8f0');
+            document.body.removeAttribute('data-theme');
+        }
+    }
+
+    function loadConfigToUI() {
+        let elEta = document.getElementById('cfg-eta'); if(elEta) elEta.value = sysConfig.etaDays;
+        let elMail = document.getElementById('cfg-mailgroup'); if(elMail) elMail.value = sysConfig.mailGroup;
+        let elDark = document.getElementById('cfg-darkmode'); if(elDark) elDark.checked = sysConfig.darkMode;
+        toggleDarkMode(sysConfig.darkMode);
+    }
+
+    // --- 【新增：前端圖片壓縮引擎 (Phase Missing Features)】 ---
+    async function compressImage(file, maxWidth = 1280, quality = 0.8) {
+        return new Promise((resolve) => {
+            if (!file || !file.type.match(/image.*/)) return resolve(file);
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob((blob) => {
+                        resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                    }, 'image/jpeg', quality);
+                };
+            };
+        });
+    }
+
     // --- 【雲端資料庫 Firebase 整合模組】 ---
     let firestoreDb = null;
-    let mainDocRef = null;
     let isFirebaseReady = false;
+    let firebaseApp = null; 
 
     async function initFirebase() {
         try {
-            // Import the functions you need from the SDKs you need
             const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
             const { getAuth, signInAnonymously } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-            const { getFirestore, doc, setDoc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            // 引入 updateDoc, getDocs, where, or, enableMultiTabIndexedDbPersistence (修復 3 & 4)
+            const { getFirestore, collection, query, orderBy, limit, doc, setDoc, updateDoc, getDocs, where, or, onSnapshot, deleteDoc, enableMultiTabIndexedDbPersistence } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
 
-            // Your web app's Firebase configuration
             const firebaseConfig = {
                 apiKey: "AIzaSyCIYkVp_L4_-A2uoKggcL6p98bnYtcLoAQ",
                 authDomain: "rtv-system.firebaseapp.com",
@@ -760,88 +923,155 @@
                 appId: "1:780397828789:web:9a47d47b24dbe01f697cfc"
             };
 
-            // Initialize Firebase
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
+            firebaseApp = initializeApp(firebaseConfig); 
+            const auth = getAuth(firebaseApp);
             
-            // 嘗試進行匿名登入 (若發生 configuration-not-found 錯誤，代表後台尚未啟用此功能)
             try {
                 await signInAnonymously(auth);
             } catch (authError) {
                 console.warn("Firebase 提示：後台尚未啟用 Authentication > 匿名登入。系統將以無登入訪客狀態繼續連線資料庫...");
-                // 【關鍵修復】: 移除 throw authError; 讓程式不會在這裡中斷，繼續往下執行資料庫連線！
             }
 
-            firestoreDb = getFirestore(app);
+            firestoreDb = getFirestore(firebaseApp); 
 
-            // 指向您專屬資料庫的集合與文件
-            mainDocRef = doc(firestoreDb, 'RTV_System_Data', 'Global_Records');
+            // --- 【修復 4：啟用 Firebase 最強的多分頁離線持久化】 ---
+            try {
+                await enableMultiTabIndexedDbPersistence(firestoreDb);
+            } catch (err) {
+                if (err.code == 'failed-precondition') {
+                    console.warn("多個分頁開啟，離線模式將由主要分頁接管");
+                } else if (err.code == 'unimplemented') {
+                    console.warn("瀏覽器不支援離線模式");
+                }
+            }
 
-            // 綁定即時監聽 (Real-time listener)
-            onSnapshot(mainDocRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.data();
-                    if (data && data.records) {
-                        db = data.records; // 將雲端資料覆寫本地
-                        localStorage.setItem('rtv_db', JSON.stringify(db)); // 備份到本地
-                        
-                        // 若使用者已進入系統，即時重新渲染畫面
-                        if (document.getElementById('wrapper').style.display === 'flex') {
-                            applyFilters();
-                            if(currentView === 'logistics') renderKanban();
-                        }
+            const recordsCollectionRef = collection(firestoreDb, 'RTV_System_Data');
+            
+            // --- 【防崩潰保護：限制一次最多拉取最新的 1000 筆資料】 ---
+            const q = query(recordsCollectionRef, orderBy('id', 'desc'), limit(1000));
+
+            onSnapshot(q, (snapshot) => {
+                // --- 【修復：終結廣播風暴與 UI 閃爍】 ---
+                // 若此變更是由本地端剛剛發起的 (尚未被伺服器完全 Ack)，則忽略這次的重複渲染
+                // 因為我們在拖拉或儲存時，早就已經手動更新本地 db 並重繪 UI 了！
+                if (snapshot.metadata.hasPendingWrites) return;
+
+                let hasChanges = false;
+                
+                snapshot.docChanges().forEach((change) => {
+                    hasChanges = true;
+                    const docData = { ...change.doc.data(), id: Number(change.doc.id) || change.doc.id };
+                    
+                    if (change.type === "added") {
+                        const existingIndex = db.findIndex(item => item.id === docData.id);
+                        if (existingIndex === -1) db.push(docData);
+                    } 
+                    if (change.type === "modified") {
+                        const index = db.findIndex(item => item.id === docData.id);
+                        if (index !== -1) db[index] = docData;
+                    } 
+                    if (change.type === "removed") {
+                        db = db.filter(item => item.id !== docData.id);
                     }
-                } else {
-                    // 雲端還沒有資料，將現有資料上傳
-                    saveDBToCloud();
+                });
+                
+                if (hasChanges) {
+                    db.sort((a, b) => b.id - a.id); 
+                    localStorage.setItem('rtv_db', JSON.stringify(db));
+                    if (document.getElementById('wrapper').style.display === 'flex') {
+                        applyFilters(false); 
+                        if(currentView === 'logistics') renderKanban();
+                        // --- 【修復 2：儀表板即時響應重繪】 ---
+                        if(currentView === 'dashboard') renderCharts(); 
+                    }
                 }
                 isFirebaseReady = true;
             }, (error) => {
                 console.error("雲端同步發生錯誤:", error);
+                isFirebaseReady = false;
             });
 
         } catch(e) {
             console.error("Firebase 初始化失敗，降級為單機本地端模式", e);
-            isFirebaseReady = true; 
+            isFirebaseReady = false; 
         }
     }
 
-    // 啟動 Firebase 監聽
     window.addEventListener('DOMContentLoaded', initFirebase);
 
-    // 改寫儲存機制：雙軌儲存 (本地 + 雲端)
-    function saveDB() { 
-        localStorage.setItem('rtv_db', JSON.stringify(db)); 
-        if (isFirebaseReady) saveDBToCloud();
+    // --- 【修復 1：真正解決競爭危害，使用 { merge: true }】 ---
+    async function syncItemToCloud(item) {
+        if (!isFirebaseReady || !firestoreDb) return;
+        try {
+            const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            // 加上 { merge: true } 確保只更新被修改的欄位，不覆蓋別人推進的 step
+            await setDoc(doc(firestoreDb, 'RTV_System_Data', item.id.toString()), item, { merge: true });
+        } catch(e) { 
+            console.error("Cloud Sync Error:", e); 
+            showToast("雲端同步延遲", `單號 ${item.sn} 狀態已存入本機，將於網路恢復後自動重試上傳。`, 5000);
+        }
     }
 
-    async function saveDBToCloud() {
-        if (!mainDocRef || !firestoreDb) return;
+    // --- 【修復 1 續：新增專門給 Edit 使用的精準局部更新函數】 ---
+    async function updateItemInCloud(id, updateData) {
+        if (!isFirebaseReady || !firestoreDb) return;
         try {
-            const { setDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-            // 將整包資料上拋雲端，觸發所有連線裝置更新
-            await setDoc(mainDocRef, { records: db });
+            const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            await updateDoc(doc(firestoreDb, 'RTV_System_Data', id.toString()), updateData);
         } catch(e) {
-            console.error("無法儲存至雲端", e);
+            console.error("Cloud Update Error:", e);
+            showToast("雲端同步延遲", `修改資料已存入本機，將於網路恢復後自動重試上傳。`, 5000);
+        }
+    }
+
+    function saveDB() { 
+        // 修正：降級防呆保護。如果 Firebase 根本沒載入成功(防火牆阻擋等)，至少存入 localStorage 保留唯讀假象，避免資料重整就消失
+        if (!isFirebaseReady) {
+            localStorage.setItem('rtv_db', JSON.stringify(db)); 
         }
     }
 
     const stepsCourier = ["Kick Off", "已離廠 (Departed)", "快遞中 (In Transit)", "快遞單號 (Tracking)", "已抵達 (Arrived)", "FA進行中 (FA Proc.)", "FA已完成 (Closed)"];
     const stepsCargo   = ["Kick Off", "已離廠 (Departed)", "退運中 (In Transit)", "已抵達 (Arrived)", "FA進行中 (FA Proc.)", "FA已完成 (Closed)"];
-    let currentUserRole = '', currentDetailId = null, currentView = 'list';
+    
+    // --- 【消除魔術字串：狀態碼與輔助函式 (Phase Code Robustness)】 ---
+    const STEP_COURIER = { TRACKING: 3, ARRIVED: 4, FA: 5, CLOSED: 6 };
+    const STEP_CARGO = { ARRIVED: 3, FA: 4, CLOSED: 5 };
+
+    function isStepTracking(step, type) { return type === 'Courier' && step === STEP_COURIER.TRACKING; }
+    function isStepArrived(step, type) { return type === 'Courier' ? step === STEP_COURIER.ARRIVED : step === STEP_CARGO.ARRIVED; }
+    function isStepFA(step, type) { return type === 'Courier' ? step === STEP_COURIER.FA : step === STEP_CARGO.FA; }
+    
+    // --- 【修復：分離雙重人格變數】 ---
+    // currentView 專心管理大選單 (grid/logistics/dashboard)
+    // currentGridMode 專心管理列表模式 (list/batch)
+    let currentUserRole = '', currentUserVendor = '', currentDetailId = null, currentView = 'grid', currentGridMode = 'list';
     let charts = {};
     let pendingMode = null; 
 
-    // --- Sidebar Toggle Logic ---
+    // 修正：搜尋防抖機制 (Debounce)
+    let searchTimeout;
+    window.debounceSearch = function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => applyFilters(), 300);
+    }
+
     function toggleSidebar() {
         document.getElementById('sidebar').classList.toggle('sidebar-collapsed');
     }
 
     function login() {
         currentUserRole = document.getElementById('roleSelect').value;
-        document.getElementById('displayRole').innerText = currentUserRole === 'SuperAdmin' ? 'System Admin' : 'Engineer';
+        // 抓取廠商名稱並轉為大寫，方便後續精準比對
+        currentUserVendor = document.getElementById('loginVendor') ? document.getElementById('loginVendor').value.trim().toUpperCase() : '';
         
-        // --- 【權限控管：非 SuperAdmin 隱藏特定選單】 ---
+        if (currentUserRole !== 'SuperAdmin' && !currentUserVendor) {
+            alert('請輸入您的所屬廠商或單位名稱 (Vendor Name)！');
+            return;
+        }
+
+        document.getElementById('displayRole').innerText = currentUserRole === 'SuperAdmin' ? 'System Admin' : `Engineer (${currentUserVendor})`;
+        
         if (currentUserRole !== 'SuperAdmin') {
             document.getElementById('nav-dashboard').style.display = 'none';
             document.getElementById('nav-settings').style.display = 'none';
@@ -853,28 +1083,24 @@
         document.getElementById('login-screen').style.display = 'none'; 
         document.getElementById('wrapper').style.display = 'flex';
         initLazyDefaults(); 
+        loadConfigToUI(); 
         applyFilters();
         if(currentView === 'logistics') renderKanban();
         initDraftAndPasteListener();
         document.getElementById('globalScanner').focus(); 
         
-        // --- 【主動推播：檢查逾期單據】 ---
         setTimeout(checkOverdueAlert, 800);
     }
 
-    // --- 【超時主動提醒模組】 ---
     function checkOverdueAlert() {
-        // --- 【權限控管：SuperAdmin 不主動彈出急件提醒】 ---
         if (currentUserRole === 'SuperAdmin') return;
 
         let overdues = db.filter(d => {
-            if(d.rtv !== 'Yes' || !d.rtvType) return false;
+            if(d.isDeleted || d.rtv !== 'Yes' || !d.rtvType) return false;
             let sArr = d.rtvType === 'Courier' ? stepsCourier : stepsCargo;
             if(d.step >= sArr.length) return false;
             
-            // 權限過濾：只提示跟自己有關的
             let dri = getDRI(d.step, d.rtvType);
-            // 修正：因為 DRI 已經全面改為 SQE，所以 Engineer 應該追蹤包含 SQE 的關卡
             if (currentUserRole === 'Engineer' && !dri.includes('SQE')) return false;
 
             let ddd = Math.floor((new Date() - new Date(d.createdAt))/(86400000));
@@ -885,8 +1111,8 @@
             let listHtml = overdues.map(o => `
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="fw-bold text-primary">${o.qpn}</div>
-                        <div class="small text-muted">SN: ${o.sn} | 廠商: ${o.vendor}</div>
+                        <div class="fw-bold text-primary">${escapeHTML(o.qpn)}</div>
+                        <div class="small text-muted">SN: ${escapeHTML(o.sn)} | 廠商: ${escapeHTML(o.vendor)}</div>
                     </div>
                     <span class="badge bg-danger rounded-pill fs-6">${Math.floor((new Date() - new Date(o.createdAt))/(86400000))} 天</span>
                 </li>
@@ -897,7 +1123,6 @@
         }
     }
 
-    // --- 【自動計算不良率模組】 ---
     function calculateDefectRate(prefix) {
         let fStr = document.getElementById(prefix + 'DefectF').value;
         let tStr = document.getElementById(prefix + 'DefectT').value;
@@ -913,26 +1138,26 @@
         }
     }
 
-    // --- 【DRI 判斷引擎：已支援 IQC>>SQE 轉交，後續全由 SQE 負責】---
     function getDRI(idx, type) {
         if(idx === 0) return 'IQC';
-        if(idx === 1) return 'IQC>>SQE'; // 離廠轉交階段
-        return 'SQE'; // 依據需求，離廠後的所有階段 DRI 皆改為 SQE
+        if(idx === 1) return 'IQC>>SQE'; 
+        return 'SQE'; 
     }
 
-    // --- 【DRI 動態提醒橫幅】---
     function updateDRIReminder() {
         let count = 0;
         
-        // --- 【權限控管：SuperAdmin 隱藏橫幅】 ---
         if (currentUserRole !== 'SuperAdmin') {
             db.forEach(item => {
-                if (item.rtv !== 'Yes' || !item.rtvType) return;
+                if (item.isDeleted || item.rtv !== 'Yes' || !item.rtvType) return;
+                
+                // 修正：只提示該廠商自己的單據
+                if (!item.vendor || item.vendor.toUpperCase() !== currentUserVendor) return;
+
                 let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
                 if (item.step >= sArr.length) return; 
                 
                 let dri = getDRI(item.step, item.rtvType); 
-                // 修正：Engineer 需追蹤已接手 (SQE) 的關卡
                 if (currentUserRole === 'Engineer' && dri.includes('SQE')) count++;
             });
         }
@@ -953,7 +1178,9 @@
     function setElText(id, text) { let el = document.getElementById(id); if(el) el.innerText = text || '--'; }
 
     function switchNav(viewId) {
-        // 手機版：點擊任一選單後，自動收合側邊欄
+        // --- 【修復：確實更新全域的大選單狀態】 ---
+        currentView = viewId;
+
         if (window.innerWidth <= 768) {
             document.getElementById('sidebar').classList.remove('sidebar-open-mobile');
         }
@@ -973,9 +1200,33 @@
         }
     }
 
-    function handleGlobalScan(val) {
+    async function handleGlobalScan(val) {
         if(!val) return;
-        let item = db.find(d => d.sn.toLowerCase() === val.toLowerCase() || d.qpn.toLowerCase() === val.toLowerCase() || (d.trackingNo && d.trackingNo.toLowerCase() === val.toLowerCase()));
+        let searchVal = val.trim().toUpperCase(); // 修正：強制轉大寫解決掃碼槍區分大小寫問題
+        showLoading();
+        let item = db.find(d => !d.isDeleted && (d.sn.toUpperCase() === searchVal || d.qpn.toUpperCase() === searchVal || (d.trackingNo && d.trackingNo.toUpperCase() === searchVal)));
+
+        if(!item && isFirebaseReady) {
+            try {
+                const { collection, query, getDocs, where, or, limit } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const recordsRef = collection(firestoreDb, 'RTV_System_Data');
+                const q = query(recordsRef, or(
+                    where('sn', '==', searchVal),
+                    where('trackingNo', '==', searchVal),
+                    where('qpn', '==', searchVal)
+                ), limit(1));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    let docSnap = querySnapshot.docs[0];
+                    item = { ...docSnap.data(), id: Number(docSnap.id) || docSnap.id };
+                    db.push(item); // 暫存到本地記憶體，讓後續 UI 可以順利開啟
+                }
+            } catch(e) {
+                console.error("Remote Search Error:", e);
+            }
+        }
+        hideLoading();
+
         if(item) {
             showToast("掃描成功", `已定位紀錄: ${item.sn}`, 2000);
             openQuickTrack(item.id); document.getElementById('globalScanner').value = ''; document.getElementById('globalScanner').blur();
@@ -984,7 +1235,6 @@
         }
     }
 
-    // --- 【Radar 一鍵複製功能】 ---
     window.copyRadar = function(val) {
         if(event) event.stopPropagation(); 
         const el = document.createElement('textarea');
@@ -993,29 +1243,29 @@
         el.style.position = 'absolute';
         el.style.left = '-9999px';
         document.body.appendChild(el);
-        el.select(); // 移除 el.focus() 避免觸發焦點攔截
+        el.select(); 
         el.setSelectionRange(0, 99999); 
         document.execCommand('copy');
         document.body.removeChild(el);
         showToast("複製成功", `已複製 Radar://${val}`, 2000);
     }
 
-    // --- 【懸浮 HUD 邏輯】 ---
     window.showHUD = function(e, id) {
-        let item = db.find(d => d.id === id);
+        let item = db.find(d => String(d.id) === String(id)); 
         if(!item) return;
         let hud = document.getElementById('sn-hover-hud');
+        if(!hud) return; 
+        
         let imgHtml = item.hasImg ? `<div style="height:120px; background:#f1f5f9; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#64748b; border: 1px dashed #cbd5e1;"><i class="fas fa-image fa-2x mb-1"></i><span style="font-size:0.7rem;">附有不良圖片</span></div>` : '';
         hud.innerHTML = `
             <div class="d-flex justify-content-between align-items-start mb-2">
-                <div class="fw-bold text-primary fs-6">${item.sn}</div>
-                <span class="badge bg-light text-dark border">${item.vendor}</span>
+                <div class="fw-bold text-primary fs-6">${escapeHTML(item.sn)}</div>
+                <span class="badge bg-light text-dark border">${escapeHTML(item.vendor)}</span>
             </div>
-            <div class="small text-danger fw-bold mb-1"><i class="fas fa-times-circle me-1"></i> ${item.descIQC}</div>
-            <div class="small text-muted mb-2"><i class="fas fa-industry me-1"></i> 站點: ${item.failStation}</div>
+            <div class="small text-danger fw-bold mb-1"><i class="fas fa-times-circle me-1"></i> ${escapeHTML(item.descIQC)}</div>
+            <div class="small text-muted mb-2"><i class="fas fa-industry me-1"></i> 站點: ${escapeHTML(item.failStation)}</div>
             ${imgHtml}
         `;
-        // 計算位置避免超出螢幕
         let x = e.clientX + 15;
         let y = e.clientY + 15;
         if (y + 200 > window.innerHeight) y = window.innerHeight - 220;
@@ -1026,18 +1276,22 @@
     }
     
     window.hideHUD = function() {
-        document.getElementById('sn-hover-hud').classList.remove('visible');
+        let hud = document.getElementById('sn-hover-hud');
+        if(hud) hud.classList.remove('visible'); 
     }
 
-    // --- 【浮動工具列控制】 ---
     window.handleRowCheck = function() {
         let checkedCount = document.querySelectorAll('.row-cb:checked').length;
         let tb = document.getElementById('floating-batch-bar');
-        if (checkedCount > 0) {
-            document.getElementById('batch-sel-count').innerText = `已選擇 ${checkedCount} 筆單據`;
-            tb.classList.add('show');
-        } else {
-            tb.classList.remove('show');
+        let countLabel = document.getElementById('batch-sel-count');
+        
+        if (tb && countLabel) {
+            if (checkedCount > 0) {
+                countLabel.innerText = `已選擇 ${checkedCount} 筆單據`;
+                tb.classList.add('show');
+            } else {
+                tb.classList.remove('show');
+            }
         }
     }
 
@@ -1046,61 +1300,68 @@
         if(!c) return; 
         let isC = c.checked; 
         document.querySelectorAll('.row-cb').forEach(cb => {
-            // 只有可見的列才全選
             if(cb.closest('tr').style.display !== 'none') cb.checked = isC;
         }); 
         handleRowCheck();
     }
 
-    window.batchAdvanceGrid = function() {
+    window.batchAdvanceGrid = async function() {
         let cbs = document.querySelectorAll('.row-cb:checked'); 
         if(cbs.length < 1) return;
         
         if(!confirm(`確定要將這 ${cbs.length} 筆單據同步推進至下一個狀態嗎？\n(若有缺少單號系統會自動補齊)`)) return;
 
-        let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        let timeStr = now.toISOString().slice(0,16);
+        showLoading();
+        let timeStr = getLocalIsoDateTime(); // 修復：改用在地化時間
         let updated = 0;
+        let promises = [];
 
         cbs.forEach(cb => {
-            let id = parseInt(cb.value);
-            let item = db.find(d => d.id === id);
+            let id = cb.value; 
+            let item = db.find(d => String(d.id) === String(id)); 
             if(item && item.rtv === 'Yes' && item.rtvType) {
                 let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
                 if(item.step < sArr.length) {
                     let nextName = sArr[item.step];
-                    if (item.rtvType === 'Courier' && nextName.includes('快遞單號') && (!item.trackingNo || item.trackingNo === '')) {
+                    
+                    // 使用輔助函式取代硬編碼字串比對
+                    if (isStepTracking(item.step, item.rtvType) && (!item.trackingNo || item.trackingNo === '')) {
                         item.trackingNo = 'AUTO-' + Date.now().toString().slice(-6);
                         item.courierComp = '順豐';
                     }
                     if(!item.timestamps) item.timestamps = [];
                     item.timestamps[item.step] = timeStr;
                     
-                    if(nextName.includes('已抵達')) {
+                    if(isStepArrived(item.step, item.rtvType)) {
                         item.ata = timeStr.split('T')[0];
                         if(item.eta && item.ata > item.eta) item.delayStatus = 'Delayed'; else item.delayStatus = 'On Time';
                     }
                     item.step++;
                     addLog(item, currentUserRole, `[列表批量推進] 完成: ${nextName}`);
+                    promises.push(syncItemToCloud(item)); 
                     updated++;
                 }
             }
         });
 
+        await Promise.all(promises);
+        
         if(updated > 0) {
             saveDB();
-            applyFilters(); // Re-render grid
+            applyFilters(); 
             document.querySelectorAll('.row-cb').forEach(c => c.checked = false);
             document.getElementById('checkAll').checked = false;
-            handleRowCheck(); // Hide toolbar
+            handleRowCheck(); 
             showToast("批量同步成功", `已成功更新 ${updated} 筆單據狀態！`);
         } else {
             showToast("提示", "選取的單據無法推進 (可能尚未設定物流或已結案)。");
         }
+        hideLoading();
     }
 
     let isFormDirty = false;
     let pastedImages = { line: false, iqc: false }; 
+    let pastedImageFiles = { line: null, iqc: null }; // 儲存真實檔案物件
 
     function initDraftAndPasteListener() {
         const inputs = document.querySelectorAll('.draft-save');
@@ -1121,10 +1382,12 @@
                     if(!pastedImages.line) {
                         document.getElementById('paste-preview-line').innerText = "✓ 已從剪貼簿獲取圖片";
                         pastedImages.line = true; isFormDirty = true;
+                        pastedImageFiles.line = item.getAsFile(); // 抓取檔案實體
                         showToast("貼圖成功", "已將截圖附加至 [產線異常圖片]", 2000);
                     } else if(!pastedImages.iqc) {
                         document.getElementById('paste-preview-iqc').innerText = "✓ 已從剪貼簿獲取圖片";
                         pastedImages.iqc = true; isFormDirty = true;
+                        pastedImageFiles.iqc = item.getAsFile(); // 抓取檔案實體
                         showToast("貼圖成功", "已將截圖附加至 [IQC實物圖片]", 2000);
                     }
                 }
@@ -1166,45 +1429,72 @@
         if(m) bootstrap.Modal.getOrCreateInstance(m).hide(); 
     }
 
+    // --- 【重構：展開過度壓縮的程式碼，提升可讀性與除錯能力】 ---
     function initLazyDefaults() {
-        let t = document.getElementById('inTime'); if(t) t.value = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16);
-        // --- 【智慧上下文記憶】 ---
-        if(localStorage.getItem('lazy_site') && document.getElementById('inSite')) document.getElementById('inSite').value = localStorage.getItem('lazy_site');
-        if(localStorage.getItem('lazy_area') && document.getElementById('inArea')) document.getElementById('inArea').value = localStorage.getItem('lazy_area');
-        if(localStorage.getItem('lazy_iqcDRI') && document.getElementById('inIqcDRI')) document.getElementById('inIqcDRI').value = localStorage.getItem('lazy_iqcDRI');
-        if(localStorage.getItem('lazy_model') && document.getElementById('inModel')) document.getElementById('inModel').value = localStorage.getItem('lazy_model');
-        if(localStorage.getItem('lazy_stage') && document.getElementById('inStage')) document.getElementById('inStage').value = localStorage.getItem('lazy_stage');
+        let t = document.getElementById('inTime'); 
+        if(t) t.value = getLocalIsoDateTime(); // 修復：改用在地化時間
+        
+        let lazySite = localStorage.getItem('lazy_site');
+        if(lazySite && document.getElementById('inSite')) document.getElementById('inSite').value = lazySite;
+        
+        let lazyArea = localStorage.getItem('lazy_area');
+        if(lazyArea && document.getElementById('inArea')) document.getElementById('inArea').value = lazyArea;
+        
+        let lazyIqcDRI = localStorage.getItem('lazy_iqcDRI');
+        if(lazyIqcDRI && document.getElementById('inIqcDRI')) document.getElementById('inIqcDRI').value = lazyIqcDRI;
+        
+        let lazyModel = localStorage.getItem('lazy_model');
+        if(lazyModel && document.getElementById('inModel')) document.getElementById('inModel').value = lazyModel;
+        
+        let lazyStage = localStorage.getItem('lazy_stage');
+        if(lazyStage && document.getElementById('inStage')) document.getElementById('inStage').value = lazyStage;
     }
 
     function fillLazyTestData() {
         let r = Math.floor(Math.random() * 900) + 100;
-        document.getElementById('inModel').value='J81a'; document.getElementById('inStage').value='PVT'; document.getElementById('inVendor').value='LITEON'; document.getElementById('inQPN').value='TEST-'+r; document.getElementById('inParts').value='IC'; document.getElementById('inSN').value='SN-'+r; document.getElementById('inFailStation').value='FATP'; document.getElementById('inRadar').value='123'+r; document.getElementById('inDescLine').value='System boot fail'; document.getElementById('inDescIQC').value='IC burned'; 
         
-        document.getElementById('inT0Result').value='Fail'; 
-        document.getElementById('inDefectF').value='1'; 
-        document.getElementById('inDefectT').value='50'; 
+        document.getElementById('inModel').value = 'J81a'; 
+        document.getElementById('inStage').value = 'PVT'; 
+        document.getElementById('inVendor').value = 'LITEON'; 
+        document.getElementById('inQPN').value = 'TEST-' + r; 
+        document.getElementById('inParts').value = 'IC'; 
+        document.getElementById('inSN').value = 'SN-' + r; 
+        document.getElementById('inFailStation').value = 'FATP'; 
+        document.getElementById('inRadar').value = '123' + r; 
+        document.getElementById('inDescLine').value = 'System boot fail'; 
+        document.getElementById('inDescIQC').value = 'IC burned'; 
+        
+        document.getElementById('inT0Result').value = 'Fail'; 
+        document.getElementById('inDefectF').value = '1'; 
+        document.getElementById('inDefectT').value = '50'; 
         calculateDefectRate('in');
         
-        document.getElementById('inRev').value='Tom FAE'; document.getElementById('resAppearance').value='NG'; document.getElementById('resDimension').value='OK'; document.getElementById('resFunction').value='Fail';
+        document.getElementById('inRev').value = 'Tom FAE'; 
+        document.getElementById('resAppearance').value = 'NG'; 
+        document.getElementById('resDimension').value = 'OK'; 
+        document.getElementById('resFunction').value = 'Fail';
+        
         isFormDirty = true;
-        showToast('💡 測試資料', '自動填入成功 (Filled).', 2000); openAddModal();
+        showToast('💡 測試資料', '自動填入成功 (Filled).', 2000); 
+        openAddModal();
     }
 
-    // --- 【新增：匯出 Excel/CSV 功能】 ---
     window.exportToCSV = function() {
-        if(!db || db.length === 0) return showToast("提示", "目前沒有資料可匯出");
+        let activeDb = db.filter(d => !d.isDeleted);
+        if(!activeDb || activeDb.length === 0) return showToast("提示", "目前沒有資料可匯出");
 
-        let headers = ["系統ID", "急件(Priority)", "地區(Site)", "發生時間", "廠區(Factory)", "機種(Model)", "階段(Stage)", "IQC DRI", "廠商(Vendor)", "料號(QPN)", "材料(Parts)", "SN", "不良站點", "Radar", "產線描述", "IQC描述", "T0結果", "T1結果", "不良率", "復判人員", "外觀", "尺寸", "功能", "RTV狀態", "批次號", "物流方式", "快遞公司", "快遞單號", "預計抵達(ETA)", "實際抵達(ATA)", "建立日期"];
+        let headers = ["地區(Site)", "發生時間", "廠區(Factory)", "機種(Model)", "階段(Stage)", "IQC DRI", "廠商(Vendor)", "料號(QPN)", "材料(Parts)", "SN", "不良站點", "Radar", "產線描述", "IQC描述", "T0結果", "T1結果", "不良率", "復判人員", "外觀", "尺寸", "功能", "RTV狀態", "批次號", "物流方式", "快遞公司", "快遞單號", "預計抵達(ETA)", "實際抵達(ATA)", "建立日期"];
         
-        // 加入 BOM 讓微軟 Excel 預設以 UTF-8 開啟，避免中文變成亂碼
         let csvContent = "\uFEFF" + headers.join(',') + "\n"; 
 
-        db.forEach(d => {
+        activeDb.forEach(d => {
+            // --- 【修復 3：匯出 Excel 的日期格式化】 ---
+            let formattedOccurTime = d.occurTime ? d.occurTime.replace('T', ' ') : '';
+            
             let row = [
-                d.id, d.priority ? "Yes" : "No", d.site, d.occurTime, d.area, d.model, d.stage, d.iqcDRI, d.vendor, d.qpn, d.parts, d.sn, d.failStation, d.radar, d.descLine, d.descIQC, d.t0Result, d.t1Result, d.defectRate, d.rev, d.resApp, d.resDim, d.resFunc, d.rtv, d.rtvBatchId || '', d.rtvType || '', d.courierComp || '', d.trackingNo || '', d.eta || '', d.ata || '', d.createdAt
+                d.site, formattedOccurTime, d.area, d.model, d.stage, d.iqcDRI, d.vendor, d.qpn, d.parts, d.sn, d.failStation, d.radar, d.descLine, d.descIQC, d.t0Result, d.t1Result, d.defectRate, d.rev, d.resApp, d.resDim, d.resFunc, d.rtv, d.rtvBatchId || '', d.rtvType || '', d.courierComp || '', d.trackingNo || '', d.eta || '', d.ata || '', d.createdAt
             ];
             
-            // 處理 CSV 的跳脫字元 (若內容中含有逗號或換行，加上雙引號包覆)
             let escapedRow = row.map(v => {
                 let str = String(v || '');
                 if (str.includes(',') || str.includes('"') || str.includes('\n')) {
@@ -1219,13 +1509,170 @@
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", `RTV_追蹤資料匯出_${new Date().toISOString().slice(0,10)}.csv`);
+        // 修復：改用 getLocalDateString() 確保匯出檔名日期正確
+        link.setAttribute("download", `RTV_追蹤資料匯出_${getLocalDateString()}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         
         showToast("匯出成功", "已成功下載 Excel (CSV) 檔案", 3000);
+    }
+
+    // --- 【新增：取得週數 Helper】 ---
+    function getWeekNumber(d) {
+        let date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7));
+        let yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+        return Math.ceil(( ( (date - yearStart) / 86400000) + 1)/7);
+    }
+
+    // --- 【新增：一鍵產生 RTV Outlook 郵件】 ---
+    window.generateRTVEML = function() {
+        let cbs = document.querySelectorAll('.row-cb:checked'); 
+        if(cbs.length < 1) return showToast("提示", "請先勾選要產生郵件的單據！");
+
+        let selectedItems = Array.from(cbs).map(cb => db.find(d => String(d.id) === String(cb.value))).filter(Boolean);
+
+        // 防呆：確認是否都是同一家廠商
+        let vendors = new Set(selectedItems.map(item => item.vendor));
+        if (vendors.size > 1) {
+            return showToast("錯誤 (Error)", "無法將不同廠商的單據合併在同一封郵件中，請重新勾選單一廠商的資料。");
+        }
+
+        // --- 【新增：防呆確認是否都是同一個地區 (Site)】 ---
+        let sites = new Set(selectedItems.map(item => item.site));
+        if (sites.size > 1) {
+            return showToast("錯誤 (Error)", "無法將不同地區 (Site) 的單據合併在同一封郵件中，請確保勾選的皆為同一廠區 (例如皆為 QSMC 或皆為 QCMT)。");
+        }
+
+        showLoading();
+
+        // 提取郵件標頭與摘要資訊 (以第一筆為主)
+        let firstItem = selectedItems[0];
+        let vendor = firstItem.vendor || "Unknown Vendor";
+        let project = firstItem.model || "Unknown Project";
+        let stage = firstItem.stage || "";
+        let fae = firstItem.rev || "Vendor FAE";
+        let parts = firstItem.parts || "Parts";
+        
+        // --- 【新增：動態統計不同不良站點的數量】 ---
+        let stationCounts = {};
+        selectedItems.forEach(item => {
+            let st = item.failStation || "Unknown";
+            stationCounts[st] = (stationCounts[st] || 0) + 1;
+        });
+
+        // 組合多站點的描述文字 (例如: found 1 pcs of Speaker failed at the CR station; found 1 pcs of Speaker failed at the FATP station)
+        let failurePhrases = [];
+        for (let [st, count] of Object.entries(stationCounts)) {
+            failurePhrases.push(`found ${count} pcs of ${parts} failed at the ${st} station`);
+        }
+        let failureString = failurePhrases.join("; ");
+        let combinedStations = Object.keys(stationCounts).join("/"); // 用於郵件標題
+
+        let now = new Date();
+        // 將日期格式從 YYYY-MM-DD 改為 YYYY/MM/DD 以符合截圖樣式
+        let rtvDate = now.toISOString().split('T')[0].replace(/-/g, '/'); 
+        let wk = getWeekNumber(now);
+
+        // 建立表格內容
+        let tableRowsHtml = selectedItems.map(item => {
+            let issuedDate = item.occurTime ? item.occurTime.split('T')[0].replace(/-/g, '/') : '';
+            
+            // --- 依照截圖格式組合 Vendor Verified Result ---
+            let funcRes = item.resFunc || 'NA';
+            let cosRes = item.resApp || 'NA';
+            let dimRes = item.resDim || 'NA';
+            let verifiedResult = `Function:${funcRes}<br>Cosmetic:${cosRes}<br>Dimension:${dimRes}`;
+            
+            return `<tr>
+                <td>${String(wk).padStart(2, '0')}</td><td>${escapeHTML(item.model)}</td><td>${escapeHTML(item.vendor)}</td>
+                <td>${escapeHTML(item.parts)}</td><td>${escapeHTML(item.qpn)}</td><td>${issuedDate}</td>
+                <td style="white-space: pre-wrap;">${escapeHTML(item.descIQC)}</td><td>1</td>
+                <td>${escapeHTML(item.defectRate)}</td><td style="white-space: pre-wrap;">${escapeHTML(item.sn)}</td>
+                <td>${escapeHTML(item.radar)}</td><td>${escapeHTML(item.failStation)}</td>
+                <td style="white-space: nowrap; text-align: left; line-height: 1.3;">${verifiedResult}</td><td>${escapeHTML(item.rev)}</td>
+                <td>${rtvDate}</td><td>SQE</td>
+            </tr>`;
+        }).join('');
+
+        // --- 依照截圖格式更新郵件問候語 (Email Body) ---
+        let mainDesc = `Hi team,<br><br>` + 
+            `During ${stage}, ${failureString}.<br>` +
+            `Please refer to the attached failure logs and raw images for details.<br>` +
+            `The defects have been verified and collected by FAE representative “ ${fae} ” on ${rtvDate}.<br>` +
+            `Kindly initiate the FA immediately upon receipt of the defects and share your findings without delay, thanks.<br><br>`;
+
+        let htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style>
+    .rtv-table { border-collapse: collapse; width: 100%; font-size: 9pt; table-layout: fixed; }
+    .rtv-table th, .rtv-table td { border: 1px solid #ddd; padding: 6px; text-align: center; word-wrap: break-word; }
+    .rtv-table th { background-color: #f2f2f2; font-weight: bold; }
+</style>
+</head>
+<body style="font-family: Arial, sans-serif; font-size: 11pt;">
+<p>${mainDesc}</p>
+<p style="margin-bottom: 2px;"><b>RTV information：</b></p>
+<table class="rtv-table">
+    <thead>
+        <tr>
+            <th style="width: 4.5%;">WK</th><th style="width: 7%;">Project</th><th style="width: 7%;">Vendor</th>
+            <th style="width: 7%;">Parts</th><th style="width: 7%;">QPN</th><th style="width: 7%;">Issued date</th>
+            <th style="width: 12%;">Failure Symptom</th><th style="width: 3.5%;">Qty</th><th style="width: 7.5%;">Fail Rate</th>
+            <th style="width: 12%;">Part's SN</th><th style="width: 5%;">Radar</th><th style="width: 5%;">Defect station</th>
+            <th style="width: 12%;">Vendor Verified result</th><th style="width: 5%;">Vendor FAE</th><th style="width: 7%;">RTV date</th>
+            <th style="width: 7%;">Requested from</th>
+        </tr>
+    </thead>
+    <tbody>
+        ${tableRowsHtml}
+    </tbody>
+</table>
+<br><p><b>RTV for FA：</b></p>
+</body>
+</html>`;
+
+        // 產生 EML 格式 (郵件標題也自動合併站點)
+        let subject = `[RTV] ${project} | QHM ${stage} | ${combinedStations} found ${vendor} ${parts} fail`;
+        const boundary = "----=_NextPart_000_0001";
+        
+        let emlContent = `To: \n`;
+        emlContent += `Subject: ${subject}\n`;
+        emlContent += `MIME-Version: 1.0\n`;
+        emlContent += `Content-Type: multipart/alternative; boundary="${boundary}"\n\n`;
+        emlContent += `--${boundary}\n`;
+        emlContent += `Content-Type: text/plain; charset="utf-8"\n\n`;
+        emlContent += `This is an HTML email. Please enable HTML viewing.\n\n`;
+        emlContent += `--${boundary}\n`;
+        emlContent += `Content-Type: text/html; charset="utf-8"\n\n`;
+        emlContent += htmlContent + `\n\n`;
+        emlContent += `--${boundary}--`;
+
+        // 下載檔案
+        const blob = new Blob([emlContent], { type: 'message/rfc822' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        
+        const safeSubject = subject.replace(/[^a-zA-Z0-9 \.\-\_\[\]\|]/gi, '').trim();
+        a.href = url;
+        a.download = `${safeSubject}.eml`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        hideLoading();
+        showToast("產生成功", "已成功產生並下載 Outlook 郵件檔案 (.eml)！");
+        
+        // 產生後清除勾選
+        document.querySelectorAll('.row-cb').forEach(c => c.checked = false);
+        let checkAllBtn = document.getElementById('checkAll');
+        if(checkAllBtn) checkAllBtn.checked = false;
+        handleRowCheck();
     }
 
     function formatBadge(val) {
@@ -1237,7 +1684,21 @@
         return `<span class="badge-enterprise bg-pending">${val}</span>`;
     }
 
-    function applyFilters() {
+    let currentDisplayCount = 50;
+    window.loadMoreList = function() {
+        currentDisplayCount += 50;
+        applyFilters(false);
+    }
+
+    window.checkedRowIds = []; // 建立全域 Checkbox 狀態庫
+
+    function applyFilters(resetPage = true) {
+        // --- 【修復 2：防範 UI 狀態丟失 (State Wipe)】 ---
+        // 重新渲染前，先記憶目前被勾選的 Checkbox，存入全域變數
+        window.checkedRowIds = Array.from(document.querySelectorAll('.row-cb:checked')).map(cb => String(cb.value));
+
+        if (resetPage !== false) currentDisplayCount = 50;
+        
         let fRes = document.getElementById('filterResult').value;
         let fProg = document.getElementById('filterProgress').value;
         let search = document.getElementById('searchInput').value.toLowerCase();
@@ -1245,9 +1706,11 @@
         let eDate = document.getElementById('filterEndDate').value;
 
         let filtered = db.filter(item => {
-            // 身分過濾
-            if(currentUserRole !== 'SuperAdmin' && currentUserRole !== 'Engineer' && item.vendor !== currentUserRole) return false;
-            // 狀態過濾
+            if(item.isDeleted) return false; 
+            
+            // 修正：Engineer 只能看自己維護的廠商單據
+            if(currentUserRole !== 'SuperAdmin' && (!item.vendor || item.vendor.toUpperCase() !== currentUserVendor)) return false;
+            
             if(fRes !== 'All' && item.t0Result !== fRes) return false;
             
             let isClosed = (item.rtv === 'Yes' && item.rtvType && item.step >= (item.rtvType==='Cargo'?stepsCargo.length:stepsCourier.length));
@@ -1255,10 +1718,8 @@
             if(fProg === 'In Progress' && (item.rtv !== 'Yes' || isClosed)) return false;
             if(fProg === 'Closed' && !isClosed) return false; 
             
-            // 搜尋過濾
             if(search && !(item.model+item.qpn+item.sn+item.vendor).toLowerCase().includes(search)) return false;
             
-            // --- 【日期區間過濾】 ---
             if(item.occurTime) {
                 let itemDate = item.occurTime.split('T')[0];
                 if(sDate && itemDate < sDate) return false;
@@ -1272,26 +1733,35 @@
         setElText('countInProgress', filtered.filter(d => d.rtv === 'Yes' && (!d.rtvType || d.step < (d.rtvType==='Cargo'?6:7))).length);
         setElText('countOverdue', filtered.filter(d => Math.floor((new Date() - new Date(d.createdAt))/(86400000)) > 7).length);
 
-        currentView === 'list' ? renderListTable(filtered) : renderBatchTable(filtered);
+        // --- 【修復：使用專屬的 currentGridMode 來判斷表格模式】 ---
+        currentGridMode === 'list' ? renderListTable(filtered) : renderBatchTable(filtered);
+        
+        // --- 【修復 2 續：渲染完畢後，把剛剛勾選的狀態補回去】 ---
+        window.checkedRowIds.forEach(id => {
+            let cb = document.querySelector(`.row-cb[value="${id}"]`);
+            if(cb) cb.checked = true;
+        });
+        handleRowCheck(); // 更新浮動工具列狀態
+
         updateDRIReminder();
-        renderMobileList(); // 同步渲染手機板清單
+        renderMobileList(); 
     }
 
-    // --- 【新增：手機版任務清單渲染模組】 ---
+    // --- 【重構 DOM 節點緩存，優化效能】 ---
     function renderMobileList() {
         let container = document.getElementById('mobile-task-list');
         if(!container) return;
-        container.innerHTML = '';
         
         let tasks = db.filter(item => {
-            if(item.rtv !== 'Yes') return false; // 只顯示 RTV = Yes
+            if(item.isDeleted || item.rtv !== 'Yes') return false; 
             let sArr = item.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
-            if (item.step >= sArr.length) return false; // 過濾掉已結案的
-            if (currentUserRole !== 'SuperAdmin' && currentUserRole !== 'Engineer' && item.vendor !== currentUserRole) return false;
+            if (item.step >= sArr.length) return false; 
+            
+            // 修正：Engineer 只能看自己維護的廠商單據
+            if(currentUserRole !== 'SuperAdmin' && (!item.vendor || item.vendor.toUpperCase() !== currentUserVendor)) return false;
             return true;
         });
 
-        // 排序：將輪到自己處理的急件排在最上面
         tasks.sort((a, b) => {
             let aDri = a.rtvType ? getDRI(a.step, a.rtvType) : '';
             let bDri = b.rtvType ? getDRI(b.step, b.rtvType) : '';
@@ -1305,6 +1775,7 @@
             return;
         }
 
+        let htmlBuffer = [];
         tasks.forEach(item => {
             let sArr = item.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
             let stepName = item.rtvType ? sArr[item.step] : '未設定物流';
@@ -1319,28 +1790,34 @@
             let borderStyle = isMyTurn ? `border: 2px solid #ef4444; box-shadow: 0 4px 10px rgba(239,68,68,0.2);` : `border-left: 4px solid var(--brand-secondary); box-shadow: 0 2px 4px rgba(0,0,0,0.05);`;
             let badgeHtml = isMyTurn ? `<span class="badge bg-danger rounded-pill px-2 py-1" style="font-size:0.7rem;"><i class="fas fa-exclamation-circle me-1"></i>待處理</span>` : '';
 
-            container.innerHTML += `
-                <div class="card mb-3 bg-white" style="${borderStyle}; border-radius: 10px; cursor: pointer;" onclick="openQuickTrack(${item.id})">
+            // --- 【修復 5：加入「脫隊 (Orphaned)」視覺提示】 ---
+            let orphanBadge = item.isOrphaned ? `<span class="badge bg-secondary text-white ms-1 shadow-sm" style="font-size:0.65rem;">脫隊</span>` : '';
+
+            htmlBuffer.push(`
+                <div class="card mb-3 bg-white" style="${borderStyle}; border-radius: 10px; cursor: pointer;" onclick="openQuickTrack('${item.id}')">
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
-                                <h6 class="fw-bold text-primary mb-1">${item.qpn}</h6>
-                                <div class="small text-muted">SN: <span class="fw-bold text-dark">${item.sn}</span></div>
+                                <h6 class="fw-bold text-primary mb-1">${escapeHTML(item.qpn)}</h6>
+                                <div class="small text-muted">SN: <span class="fw-bold text-dark">${escapeHTML(item.sn)}</span>${orphanBadge}</div>
                             </div>
                             ${badgeHtml}
                         </div>
                         <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
-                            <span class="badge bg-light text-dark border">${item.vendor}</span>
+                            <span class="badge bg-light text-dark border">${escapeHTML(item.vendor)}</span>
                             <span class="small fw-bold text-warning">${stepName} <i class="fas fa-chevron-right ms-1 text-muted"></i></span>
                         </div>
                     </div>
                 </div>
-            `;
+            `);
         });
+        
+        container.innerHTML = htmlBuffer.join('');
     }
 
     function toggleView(mode) {
-        currentView = mode; 
+        // --- 【修復：使用專屬的 currentGridMode，不再挾持 currentView】 ---
+        currentGridMode = mode; 
         let la = document.getElementById('listActions'); if(la) la.style.visibility = (mode === 'list' ? 'visible' : 'hidden');
         let mt = document.getElementById('mainTable'); if(mt) mt.className = mode === 'list' ? 'table table-enterprise table-hover align-middle table-list-view' : 'table table-enterprise table-hover align-middle'; 
         applyFilters();
@@ -1359,7 +1836,10 @@
         let thEl = document.getElementById('tableHead'); if(thEl) thEl.innerHTML = thead; 
         let tbody = document.getElementById('tableBody'); if(tbody) tbody.innerHTML = ''; else return;
         
-        data.forEach(item => {
+        let renderData = data.slice(0, currentDisplayCount);
+        let htmlBuffer = []; // [修復] 補上缺漏的 htmlBuffer 陣列宣告
+        
+        renderData.forEach(item => {
             let pIcon = item.priority ? `<i class="fas fa-exclamation-circle priority-high"></i> ` : '';
             let ddd = Math.floor((new Date() - new Date(item.createdAt))/(86400000));
             let dddCls = ddd > 7 ? 'ddd-overdue' : (ddd > 3 ? 'ddd-warning' : 'ddd-normal');
@@ -1367,14 +1847,14 @@
             let progressHtml = '<span class="text-muted small">未啟動 (Not Started)</span>';
             if (item.rtv === 'Yes') {
                 if (!item.rtvType) {
-                    progressHtml = `<button class="btn btn-xs btn-outline-primary py-0 px-2 rounded-pill" style="font-size:0.7rem;" onclick="openRTVModal(${item.id})">選擇物流方式</button>`;
+                    progressHtml = `<button class="btn btn-xs btn-outline-primary py-0 px-2 rounded-pill" style="font-size:0.7rem;" onclick="openRTVModal('${item.id}')">選擇物流方式</button>`;
                 } else {
                     let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
                     let isClosed = item.step >= sArr.length;
                     let stepText = isClosed ? '已結案 (Closed)' : sArr[item.step];
                     let pct = (item.step / (sArr.length - 1)) * 100;
                     let color = isClosed ? 'bg-success' : 'bg-primary';
-                    let nextActionBtn = isClosed ? '' : `<button class="btn btn-sm btn-link text-success p-0 ms-2" onclick="quickNextStep(${item.id})" title="推進至: ${stepText}"><i class="fas fa-forward"></i></button>`;
+                    let nextActionBtn = isClosed ? '' : `<button class="btn btn-sm btn-link text-success p-0 ms-2" onclick="quickNextStep('${item.id}')" title="推進至: ${stepText}"><i class="fas fa-forward"></i></button>`;
 
                     progressHtml = `
                     <div class="d-flex flex-column" style="width: 150px;">
@@ -1390,79 +1870,112 @@
                 }
             }
 
-            let rtvSelect = `<select class="form-select form-select-sm border-0 bg-transparent py-0 text-primary fw-bold" style="width: 90px;" onchange="updateRTVStatus(${item.id}, this.value)"><option value="Yes" ${item.rtv === 'Yes' ? 'selected' : ''}>Yes</option><option value="Pending" ${item.rtv === 'Pending' ? 'selected' : ''}>Pending</option><option value="No" ${item.rtv === 'No' ? 'selected' : ''}>No</option></select>`;
+            let rtvSelect = `<select class="form-select form-select-sm border-0 bg-transparent py-0 text-primary fw-bold" style="width: 90px;" onchange="updateRTVStatus('${item.id}', this.value)"><option value="Yes" ${item.rtv === 'Yes' ? 'selected' : ''}>Yes</option><option value="Pending" ${item.rtv === 'Pending' ? 'selected' : ''}>Pending</option><option value="No" ${item.rtv === 'No' ? 'selected' : ''}>No</option></select>`;
             let imgIcon = item.hasImg ? '<i class="fas fa-image text-success" title="Contains Image"></i>' : '-';
             
             let actionBtns = `
-                <button class="btn btn-sm btn-light border text-primary shadow-sm" onclick="openRTVModal(${item.id})" ${item.rtv!=='Yes'?'disabled':''} title="詳細物流視窗"><i class="fas fa-search-location"></i></button>
-                <button class="btn btn-sm btn-warning text-dark border shadow-sm ms-1" onclick="openQuickTrack(${item.id})" ${item.rtv!=='Yes'?'disabled':''} title="閃電預覽面板"><i class="fas fa-bolt"></i></button>
-                ${currentUserRole==='SuperAdmin' ? `<button class="btn btn-sm btn-light border text-warning ms-1 shadow-sm" onclick="openEditModal(${item.id})"><i class="fas fa-edit"></i></button>` : ''}
+                <button class="btn btn-sm btn-light border text-primary shadow-sm" onclick="openRTVModal('${item.id}')" ${item.rtv!=='Yes'?'disabled':''} title="詳細物流視窗"><i class="fas fa-search-location"></i></button>
+                <button class="btn btn-sm btn-warning text-dark border shadow-sm ms-1" onclick="openQuickTrack('${item.id}')" ${item.rtv!=='Yes'?'disabled':''} title="閃電預覽面板"><i class="fas fa-bolt"></i></button>
+                ${currentUserRole==='SuperAdmin' ? `<button class="btn btn-sm btn-light border text-warning ms-1 shadow-sm" onclick="openEditModal('${item.id}')"><i class="fas fa-edit"></i></button>` : ''}
             `;
 
             let tResultHtml = `T0: ${formatBadge(item.t0Result)}`;
             if (item.t1Result) tResultHtml += `<br>T1: ${formatBadge(item.t1Result)}`;
 
-            tbody.innerHTML += `<tr>
-                <td class="sticky-col-1"><input type="checkbox" class="row-cb form-check-input" value="${item.id}" onchange="handleRowCheck()"></td>
-                <td class="sticky-col-2 fw-medium">${item.area}</td><td class="sticky-col-3">${pIcon}<b class="text-main">${item.qpn}</b></td>
-                <td class="sticky-col-4">${item.parts}</td><td class="sticky-col-5 sn-hover fw-bold text-primary" onmouseenter="showHUD(event, ${item.id})" onmouseleave="hideHUD()">${item.sn}</td><td class="sticky-col-6">${item.stage}</td>
+            // --- 【修復 5：加入「脫隊 (Orphaned)」視覺提示】 ---
+            let orphanBadge = item.isOrphaned ? `<span class="badge bg-secondary text-white ms-1 shadow-sm" style="font-size:0.65rem;" title="曾經在批次中，後被獨立拆出">脫隊追蹤</span>` : '';
+
+            // --- 【修復 2 續：直接在 HTML 字串拼接時把 checked 屬性加回去，最穩固的做法】 ---
+            let isChecked = window.checkedRowIds && window.checkedRowIds.includes(String(item.id)) ? 'checked' : '';
+
+            htmlBuffer.push(`<tr>
+                <td class="sticky-col-1"><input type="checkbox" class="row-cb form-check-input" value="${item.id}" ${isChecked} onchange="handleRowCheck()"></td>
+                <td class="sticky-col-2 fw-medium">${escapeHTML(item.area)}</td><td class="sticky-col-3">${pIcon}<b class="text-main">${escapeHTML(item.qpn)}</b></td>
+                <td class="sticky-col-4">${escapeHTML(item.parts)}</td><td class="sticky-col-5 sn-hover fw-bold text-primary" onmouseenter="showHUD(event, '${item.id}')" onmouseleave="hideHUD()">${escapeHTML(item.sn)}${orphanBadge}</td><td class="sticky-col-6">${escapeHTML(item.stage)}</td>
                 <td>${tResultHtml}</td><td>${progressHtml}</td><td>${rtvSelect}</td><td class="${dddCls} fw-bold">${ddd}d</td>
                 <td style="min-width: 140px;">${actionBtns}</td>
-                <td>${item.site}</td><td>${item.occurTime.split('T')[0]}</td><td>${item.model}</td><td>${item.iqcDRI}</td><td class="fw-bold">${item.vendor}</td>
-            <td>${item.failStation}</td>
-            <td><span class="badge-radar" onclick="copyRadar('${item.radar}')" title="點擊複製"><i class="fas fa-link"></i>Radar://${item.radar}</span></td>
-            <td class="fw-bold text-primary">${item.defectRate || '-'}</td><td>${item.rev}</td>
+                <td>${escapeHTML(item.site)}</td><td>${item.occurTime ? item.occurTime.split('T')[0] : '-'}</td><td>${escapeHTML(item.model)}</td><td>${escapeHTML(item.iqcDRI)}</td><td class="fw-bold">${escapeHTML(item.vendor)}</td>
+            <td>${escapeHTML(item.failStation)}</td>
+            <td><span class="badge-radar" onclick="copyRadar('${escapeHTML(item.radar)}')" title="點擊複製"><i class="fas fa-link"></i>Radar://${escapeHTML(item.radar)}</span></td>
+            <td class="fw-bold text-primary">${escapeHTML(item.defectRate) || '-'}</td><td>${escapeHTML(item.rev)}</td>
                 <td>${formatBadge(item.resApp)}</td><td>${formatBadge(item.resDim)}</td><td>${formatBadge(item.resFunc)}</td>
-                <td class="text-dark small" style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${item.descLine}</td>
-                <td class="text-danger small" style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${item.descIQC}</td>
+                <td class="text-dark small" style="max-width:120px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHTML(item.descLine)}">${escapeHTML(item.descLine)}</td>
+                <td class="text-danger small" style="max-width:120px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHTML(item.descIQC)}">${escapeHTML(item.descIQC)}</td>
                 <td class="text-center">${imgIcon}</td>
-            </tr>`;
+            </tr>`);
         });
+        
+        let bottomBtn = '';
+        if (data.length > currentDisplayCount) {
+            bottomBtn = `<tr><td colspan="26" class="text-center py-3 bg-light"><button class="btn btn-outline-primary rounded-pill fw-bold px-4 shadow-sm" onclick="loadMoreList()">展開更多資料 (Load More) <i class="fas fa-chevron-down ms-1"></i></button></td></tr>`;
+        } else if (data.length > 0 && currentDisplayCount >= 50) {
+            // --- 【修復：破解假分頁幻覺，給予明確的系統邊界提示】 ---
+            bottomBtn = `<tr><td colspan="26" class="text-center py-3 text-muted small bg-light">已顯示本機快取的 ${data.length} 筆資料。若需查詢更早期的單據，請使用上方「掃碼 / 搜尋」功能。</td></tr>`;
+        }
+        
+        tbody.innerHTML = htmlBuffer.join('') + bottomBtn;
     }
 
     function renderBatchTable(data) {
         let thEl = document.getElementById('tableHead'); 
         if(thEl) thEl.innerHTML = `<tr><th width="30"></th><th>批次 (Batch)</th><th>廠商 (Vendor)</th><th>數量 (Qty)</th><th>物流 (Mode)</th><th>進度 (Progress)</th><th>操作 (Action)</th></tr>`;
         let tbody = document.getElementById('tableBody'); if(tbody) tbody.innerHTML = ''; else return;
-        let batches = {}; data.forEach(d => { if(d.rtv !== 'Yes') return; let k = d.rtvBatchId || d.trackingNo || '未群組 (Unbatched)'; if(!batches[k]) batches[k] = []; batches[k].push(d); });
+        let batches = {}; data.forEach(d => { if(d.isDeleted || d.rtv !== 'Yes') return; let k = d.rtvBatchId || d.trackingNo || '未群組 (Unbatched)'; if(!batches[k]) batches[k] = []; batches[k].push(d); });
+        
+        let htmlBuffer = [];
         Object.keys(batches).forEach((k, idx) => {
             let grp = batches[k], f = grp[0]; let steps = f.rtvType==='Cargo'?stepsCargo:stepsCourier; let pct = (f.step/(steps.length)*100); let progText = f.step >= steps.length ? '已結案' : (steps[f.step] || 'Completed'); let color = f.step >= steps.length ? 'bg-success' : 'bg-primary';
-            let tr = `<tr class="bg-light fw-bold" style="cursor:pointer;" onclick="toggleBatchRow('bt-${idx}')"><td><i class="fas fa-chevron-right text-muted" id="icon-${idx}"></i></td><td class="text-primary"><i class="fas fa-cubes me-2"></i> ${k}</td><td>${f.vendor}</td><td><span class="badge bg-secondary">${grp.length}</span></td><td>${f.rtvType||'-'}</td><td><div class="progress" style="height:6px; width:100px; display:inline-flex;"><div class="progress-bar ${color}" style="width:${pct}%"></div></div><span class="small ms-2 text-muted">${progText}</span></td><td><button class="btn btn-sm btn-primary py-0" onclick="event.stopPropagation(); openRTVModal(${f.id})">詳情 (Details)</button></td></tr>`;
-            let childRows = grp.map(g => `<tr><td></td><td colspan="5" class="small bg-white ps-4 border-bottom"><span class="text-muted">SN:</span> <b>${g.sn}</b> <span class="mx-2 text-muted">|</span> QPN: ${g.qpn} <span class="mx-2 text-muted">|</span> Model: ${g.model}</td><td class="bg-white border-bottom"><button class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.7rem;" onclick="removeFromBatch(${g.id})" title="移除"><i class="fas fa-unlink"></i></button></td></tr>`).join('');
-            tbody.innerHTML += tr + `<tbody id="bt-${idx}" style="display:none;">${childRows}</tbody>`;
+            
+            let tr = `<tr class="bg-light fw-bold" style="cursor:pointer;" onclick="toggleBatchRow(${idx})"><td><i class="fas fa-chevron-right text-muted" id="icon-${idx}"></i></td><td class="text-primary"><i class="fas fa-cubes me-2"></i> ${escapeHTML(k)}</td><td>${escapeHTML(f.vendor)}</td><td><span class="badge bg-secondary">${grp.length}</span></td><td>${f.rtvType||'-'}</td><td><div class="progress" style="height:6px; width:100px; display:inline-flex;"><div class="progress-bar ${color}" style="width:${pct}%"></div></div><span class="small ms-2 text-muted">${progText}</span></td><td><button class="btn btn-sm btn-primary py-0" onclick="event.stopPropagation(); openRTVModal('${f.id}')">詳情 (Details)</button></td></tr>`;
+            
+            let childRows = grp.map(g => `<tr class="batch-child-${idx}" style="display:none;"><td></td><td colspan="5" class="small bg-white ps-4 border-bottom"><span class="text-muted">SN:</span> <b>${escapeHTML(g.sn)}</b> <span class="mx-2 text-muted">|</span> QPN: ${escapeHTML(g.qpn)} <span class="mx-2 text-muted">|</span> Model: ${escapeHTML(g.model)}</td><td class="bg-white border-bottom"><button class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.7rem;" onclick="removeFromBatch('${g.id}')" title="移除"><i class="fas fa-unlink"></i></button></td></tr>`).join('');
+            
+            htmlBuffer.push(tr + childRows);
         });
+        tbody.innerHTML = htmlBuffer.join('');
     }
 
-    function toggleBatchRow(id) { let el = document.getElementById(id), icon = document.getElementById(id.replace('bt-', 'icon-')); if (el.style.display === 'none') { el.style.display = 'table-row-group'; icon.className = 'fas fa-chevron-down text-primary'; } else { el.style.display = 'none'; icon.className = 'fas fa-chevron-right text-muted'; } }
+    function toggleBatchRow(idx) { 
+        let rows = document.querySelectorAll('.batch-child-' + idx);
+        let icon = document.getElementById('icon-' + idx);
+        if (!rows || rows.length === 0) return;
+        
+        let isHidden = rows[0].style.display === 'none';
+        rows.forEach(r => r.style.display = isHidden ? 'table-row' : 'none');
+        
+        if (icon) {
+            icon.className = isHidden ? 'fas fa-chevron-down text-primary' : 'fas fa-chevron-right text-muted';
+        }
+    }
 
     function renderKanban() {
-        ['kb-col-0','kb-col-1','kb-col-2','kb-col-3'].forEach(id => { let el=document.getElementById(id); if(el) el.innerHTML=''; });
         let counts = [0, 0, 0, 0];
+        let colsHtml = ["", "", "", ""];
 
         db.filter(d => {
-            if(d.rtv !== 'Yes') return false;
-            if(currentUserRole !== 'SuperAdmin' && currentUserRole !== 'Engineer' && d.vendor !== currentUserRole) return false;
+            if(d.isDeleted || d.rtv !== 'Yes') return false;
+            
+            // 修正：Engineer 只能看自己維護的廠商單據
+            if(currentUserRole !== 'SuperAdmin' && (!d.vendor || d.vendor.toUpperCase() !== currentUserVendor)) return false;
             return true;
         }).forEach(item => {
             let colIdx = 0; 
             let sArr = [];
             if (item.rtvType) {
                 sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
-                let stepName = sArr[item.step];
+                
                 if (item.step >= sArr.length) colIdx = 3; 
-                else if (stepName && stepName.includes('FA')) colIdx = 2; 
+                else if (isStepFA(item.step, item.rtvType)) colIdx = 2; 
                 else if (item.step > 0) colIdx = 1; 
             }
 
             counts[colIdx]++;
             let pIcon = item.priority ? `<i class="fas fa-fire text-danger" title="High Priority"></i> ` : '';
             
-            // Highlight cards waiting for current user
             let isMyTurn = false;
             if (item.rtvType && item.step < sArr.length) {
                 let dri = getDRI(item.step, item.rtvType);
                 if (currentUserRole === 'SuperAdmin' && (dri === 'IQC' || dri === 'SQE' || dri === 'IQC>>SQE')) isMyTurn = true;
-                // 修正：Kanban 卡片高亮也要對齊 SQE 標籤
                 else if (currentUserRole === 'Engineer' && dri.includes('SQE')) isMyTurn = true;
             }
             let borderStyle = isMyTurn ? `border: 2px solid #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.3);` : `border-left: 4px solid var(--brand-secondary);`;
@@ -1470,25 +1983,32 @@
             let nextActionBtn = '';
             if (colIdx < 3 && item.rtvType) {
                 let nextName = sArr[item.step];
-                nextActionBtn = `<button class="btn btn-sm btn-success py-0 px-2 shadow-sm k-card-action" onclick="event.stopPropagation(); quickNextStep(${item.id})" title="推進至: ${nextName}"><i class="fas fa-forward"></i></button>`;
+                nextActionBtn = `<button class="btn btn-sm btn-success py-0 px-2 shadow-sm k-card-action" onclick="event.stopPropagation(); quickNextStep('${item.id}')" title="推進至: ${nextName}"><i class="fas fa-forward"></i></button>`;
             } else if (colIdx === 0 && !item.rtvType) {
-                nextActionBtn = `<button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm k-card-action" onclick="event.stopPropagation(); openRTVModal(${item.id})">選物流</button>`;
+                nextActionBtn = `<button class="btn btn-sm btn-outline-primary py-0 px-2 shadow-sm k-card-action" onclick="event.stopPropagation(); openRTVModal('${item.id}')">選物流</button>`;
             }
 
+            // --- 【修復 5：加入「脫隊 (Orphaned)」視覺提示】 ---
+            let orphanBadge = item.isOrphaned ? `<span class="badge bg-secondary text-white ms-1 shadow-sm" style="font-size:0.65rem;">脫隊追蹤</span>` : '';
+
             let cardHtml = `
-                <div class="k-card" style="${borderStyle}" draggable="true" ondragstart="dragStart(event, ${item.id})" ondragend="dragEnd(event)" onclick="openQuickTrack(${item.id})">
+                <div class="k-card" style="${borderStyle}" draggable="true" ondragstart="dragStart(event, '${item.id}')" ondragend="dragEnd(event)" onclick="openQuickTrack('${item.id}')">
                     ${nextActionBtn}
-                    <div class="k-card-title pe-4">${pIcon}${item.qpn}</div>
-                    <div class="mb-2"><span class="badge bg-light text-dark border border-secondary">${item.vendor}</span></div>
-                    <div class="k-card-desc mb-1"><i class="fas fa-barcode text-muted"></i> SN: <span class="fw-bold text-dark">${item.sn}</span></div>
-                    <div class="k-card-desc text-danger mb-0" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><i class="fas fa-exclamation-circle text-muted"></i> ${item.descIQC}</div>
+                    <div class="k-card-title pe-4">${pIcon}${escapeHTML(item.qpn)}</div>
+                    <div class="mb-2"><span class="badge bg-light text-dark border border-secondary">${escapeHTML(item.vendor)}</span></div>
+                    <div class="k-card-desc mb-1"><i class="fas fa-barcode text-muted"></i> SN: <span class="fw-bold text-dark">${escapeHTML(item.sn)}</span>${orphanBadge}</div>
+                    <div class="k-card-desc text-danger mb-0" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><i class="fas fa-exclamation-circle text-muted"></i> ${escapeHTML(item.descIQC)}</div>
                 </div>
             `;
-            let col = document.getElementById('kb-col-' + colIdx);
-            if(col) col.innerHTML += cardHtml;
+            colsHtml[colIdx] += cardHtml;
         });
 
-        for(let i=0; i<4; i++) setElText('kb-count-'+i, counts[i]);
+        for(let i=0; i<4; i++) {
+            let col = document.getElementById('kb-col-' + i);
+            if(col) col.innerHTML = colsHtml[i];
+            setElText('kb-count-'+i, counts[i]);
+        }
+        
         updateDRIReminder();
     }
 
@@ -1508,9 +2028,9 @@
     function drop(ev, targetColIdx) {
         ev.preventDefault();
         document.querySelectorAll('.kanban-col').forEach(col => col.classList.remove('drag-over'));
-        let id = parseInt(ev.dataTransfer.getData("text/plain"));
+        let id = ev.dataTransfer.getData("text/plain"); 
         if(!id) return;
-        let item = db.find(d => d.id === id);
+        let item = db.find(d => String(d.id) === String(id)); 
         if(!item) return;
 
         if (!item.rtvType) return showToast("無法拖曳", "請先設定物流方式 (Select Mode First)。", 3000);
@@ -1524,36 +2044,45 @@
         if (targetColIdx > currentColIdx) {
             let targetStep = item.step;
             if (targetColIdx === 1) targetStep = 2; 
-            else if (targetColIdx === 2) targetStep = item.rtvType === 'Courier' ? 5 : 4; 
+            else if (targetColIdx === 2) targetStep = item.rtvType === 'Courier' ? STEP_COURIER.FA : STEP_CARGO.FA; 
             else if (targetColIdx === 3) targetStep = sArr.length; 
 
-            if (item.rtvType === 'Courier' && item.step <= 3 && targetStep > 3 && (!item.trackingNo || item.trackingNo.trim() === '')) {
-                let trackVal = prompt(`[防呆檢查] 跨越快遞階段，請輸入快遞單號 (預設順豐，留空填入 AUTO 自動生成):`);
+            let trackVal = '';
+            if (item.rtvType === 'Courier' && item.step <= STEP_COURIER.TRACKING && targetStep > STEP_COURIER.TRACKING && (!item.trackingNo || item.trackingNo.trim() === '')) {
+                trackVal = prompt(`[防呆檢查] 跨越快遞階段，請輸入快遞單號 (預設順豐，留空填入 AUTO 自動生成):`);
                 if(trackVal === null) return; 
                 if(trackVal.trim() === '' || trackVal.toUpperCase() === 'AUTO') trackVal = 'AUTO-' + Date.now().toString().slice(-6); 
-                item.trackingNo = trackVal;
-                item.courierComp = item.courierComp || '順豐';
             }
 
-            let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            let timeStr = now.toISOString().slice(0,16);
+            showLoading();
+            let timeStr = getLocalIsoDateTime(); // 修復：改用在地化時間
             
-            for(let i = item.step; i < targetStep; i++) {
-                if (!item.timestamps[i]) item.timestamps[i] = timeStr;
-                if (sArr[i].includes('已抵達')) {
-                    item.ata = timeStr.split('T')[0];
-                    if(item.eta && item.ata > item.eta) item.delayStatus = 'Delayed'; else item.delayStatus = 'On Time';
+            let targets = item.rtvBatchId ? db.filter(d => d.rtvBatchId === item.rtvBatchId) : [item];
+            let promises = targets.map(async d => {
+                for(let i = d.step; i < targetStep; i++) {
+                    if (!d.timestamps[i]) d.timestamps[i] = timeStr;
+                    if (isStepArrived(i, d.rtvType)) {
+                        d.ata = timeStr.split('T')[0];
+                        if(d.eta && d.ata > d.eta) d.delayStatus = 'Delayed'; else d.delayStatus = 'On Time';
+                    }
                 }
-            }
+                d.step = targetStep;
+                if (trackVal) {
+                    d.trackingNo = trackVal;
+                    d.courierComp = item.courierComp || '順豐';
+                }
+                let stepName = targetStep >= sArr.length ? "已結案" : sArr[targetStep-1];
+                addLog(d, currentUserRole, `[拖拉推進] 移動至: ${stepName}`);
+                await syncItemToCloud(d);
+            });
             
-            item.step = targetStep;
-            let stepName = targetStep >= sArr.length ? "已結案" : sArr[targetStep-1];
-            addLog(item, currentUserRole, `[拖拉推進] 直接移動至: ${stepName}`);
-            
-            saveDB();
-            renderKanban();
-            applyFilters();
-            showToast("推進成功", `已成功移動卡片至新區域！`);
+            Promise.all(promises).then(() => {
+                saveDB();
+                renderKanban();
+                applyFilters(false);
+                hideLoading();
+                showToast("推進成功", `已成功移動 ${targets.length} 張卡片至新區域！`);
+            });
         } else if (targetColIdx === currentColIdx) {
              // Do nothing
         } else {
@@ -1561,9 +2090,9 @@
         }
     }
 
-    function advanceColumn(colIdx) {
+    async function advanceColumn(colIdx) {
         let itemsInCol = db.filter(item => {
-            if(item.rtv !== 'Yes' || !item.rtvType) return false;
+            if(item.isDeleted || item.rtv !== 'Yes' || !item.rtvType) return false;
             let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
             let cIdx = 0;
             if (item.step >= sArr.length) cIdx = 3; 
@@ -1575,15 +2104,16 @@
         if(itemsInCol.length === 0) return showToast("提示", "此欄位目前沒有可推進的資料。");
         if(!confirm(`確定要將此欄位的 ${itemsInCol.length} 筆資料批量推往下一個進度嗎？`)) return;
 
-        let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        let timeStr = now.toISOString().slice(0,16);
+        showLoading();
+        let timeStr = getLocalIsoDateTime(); // 修復：改用在地化時間
+        let promises = [];
 
         itemsInCol.forEach(item => {
             let sArr = item.rtvType === 'Courier' ? stepsCourier : stepsCargo;
             if(item.step >= sArr.length) return;
             
             let nextName = sArr[item.step];
-            if (item.rtvType === 'Courier' && nextName.includes('快遞單號') && !item.trackingNo) {
+            if (isStepTracking(item.step, item.rtvType) && !item.trackingNo) {
                  item.trackingNo = 'AUTO-' + Date.now().toString().slice(-6);
                  item.courierComp = item.courierComp || '順豐';
             }
@@ -1591,69 +2121,65 @@
             if(!item.timestamps) item.timestamps = [];
             item.timestamps[item.step] = timeStr;
             
-            if(nextName.includes('已抵達')) {
+            if(isStepArrived(item.step, item.rtvType)) {
                 item.ata = timeStr.split('T')[0];
                 if(item.eta && item.ata > item.eta) item.delayStatus = 'Delayed'; else item.delayStatus = 'On Time';
             }
 
             item.step++;
             addLog(item, currentUserRole, `[欄位批量推進] 完成: ${nextName}`);
+            promises.push(syncItemToCloud(item)); 
         });
 
+        await Promise.all(promises);
         saveDB();
         renderKanban();
+        hideLoading();
         showToast("批量成功", `已成功推進 ${itemsInCol.length} 筆資料！`);
     }
 
-    // --- 【Dashboard 擴充：加入 Model, Material, Monthly, Yearly】 ---
     function renderCharts() {
-        // Clear all canvases
+        let activeDb = db.filter(d => !d.isDeleted && (currentUserRole === 'SuperAdmin' || (d.vendor && d.vendor.toUpperCase() === currentUserVendor)));
         ['chartDDD', 'chartVendor', 'chartModel', 'chartMaterial', 'chartMonthly', 'chartYearly', 'chartStation'].forEach(id => { 
             if(charts[id]) charts[id].destroy(); 
         });
 
-        // 1. DDD Distribution
         let dddGroups = { '<3 Days': 0, '3-7 Days': 0, '>7 Days (Overdue)': 0 };
-        db.forEach(d => { let ddd = Math.floor((new Date() - new Date(d.createdAt))/(86400000)); if(ddd <= 3) dddGroups['<3 Days']++; else if(ddd <= 7) dddGroups['3-7 Days']++; else dddGroups['>7 Days (Overdue)']++; });
+        activeDb.forEach(d => { let ddd = Math.floor((new Date() - new Date(d.createdAt))/(86400000)); if(ddd <= 3) dddGroups['<3 Days']++; else if(ddd <= 7) dddGroups['3-7 Days']++; else dddGroups['>7 Days (Overdue)']++; });
         let cddd = document.getElementById('chartDDD');
         if(cddd) charts['chartDDD'] = new Chart(cddd, { type: 'bar', data: { labels: Object.keys(dddGroups), datasets: [{ label: 'Cases', data: Object.values(dddGroups), backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
 
-        // 2. Vendor Defect Rate
-        let vData = {}; db.forEach(d => { vData[d.vendor] = (vData[d.vendor]||0) + 1; });
+        // 修正：為圖表的標籤加入 escapeHTML 防止 XSS 注入
+        let vData = {}; activeDb.forEach(d => { let v = escapeHTML(d.vendor); vData[v] = (vData[v]||0) + 1; });
         let cven = document.getElementById('chartVendor');
         if(cven) charts['chartVendor'] = new Chart(cven, { type: 'doughnut', data: { labels: Object.keys(vData), datasets: [{ data: Object.values(vData), backgroundColor: ['#4f46e5', '#0ea5e9', '#f43f5e'] }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '65%' } });
 
-        // 3. Model Distribution (New)
-        let mData = {}; db.forEach(d => { if(d.model) mData[d.model] = (mData[d.model]||0) + 1; });
+        let mData = {}; activeDb.forEach(d => { if(d.model) { let m = escapeHTML(d.model); mData[m] = (mData[m]||0) + 1; } });
         let cmod = document.getElementById('chartModel');
         if(cmod) charts['chartModel'] = new Chart(cmod, { type: 'pie', data: { labels: Object.keys(mData), datasets: [{ data: Object.values(mData), backgroundColor: ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'] }] }, options: { responsive: true, maintainAspectRatio: false } });
 
-        // 4. Material Breakdown (New)
-        let matData = {}; db.forEach(d => { if(d.parts) matData[d.parts] = (matData[d.parts]||0) + 1; });
+        let matData = {}; activeDb.forEach(d => { if(d.parts) { let p = escapeHTML(d.parts); matData[p] = (matData[p]||0) + 1; } });
         let cmat = document.getElementById('chartMaterial');
         if(cmat) charts['chartMaterial'] = new Chart(cmat, { type: 'doughnut', data: { labels: Object.keys(matData), datasets: [{ data: Object.values(matData), backgroundColor: ['#ec4899', '#f97316', '#14b8a6', '#6366f1'] }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '50%' } });
 
-        // 5. Fail Station
-        let sData = {}; db.forEach(d => { if(d.failStation) sData[d.failStation] = (sData[d.failStation]||0) + 1; });
+        let sData = {}; activeDb.forEach(d => { if(d.failStation) { let s = escapeHTML(d.failStation); sData[s] = (sData[s]||0) + 1; } });
         let csta = document.getElementById('chartStation');
         if(csta) charts['chartStation'] = new Chart(csta, { type: 'polarArea', data: { labels: Object.keys(sData), datasets: [{ data: Object.values(sData), backgroundColor: ['rgba(239,68,68,0.7)', 'rgba(59,130,246,0.7)', 'rgba(245,158,11,0.7)', 'rgba(168,85,247,0.7)'] }] }, options: { responsive: true, maintainAspectRatio: false } });
 
-        // 6. Monthly Count (New)
         let monthData = {}; 
-        db.forEach(d => { 
+        activeDb.forEach(d => { 
             if(!d.occurTime) return;
-            let m = d.occurTime.substring(0, 7); // YYYY-MM
+            let m = d.occurTime.substring(0, 7); 
             monthData[m] = (monthData[m]||0) + 1; 
         });
         let sortedMonths = Object.keys(monthData).sort();
         let cmonth = document.getElementById('chartMonthly');
         if(cmonth) charts['chartMonthly'] = new Chart(cmonth, { type: 'bar', data: { labels: sortedMonths, datasets: [{ label: '異常數量', data: sortedMonths.map(k=>monthData[k]), backgroundColor: '#3b82f6', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
 
-        // 7. Yearly Count (New)
         let yearData = {}; 
-        db.forEach(d => { 
+        activeDb.forEach(d => { 
             if(!d.occurTime) return;
-            let y = d.occurTime.substring(0, 4); // YYYY
+            let y = d.occurTime.substring(0, 4); 
             yearData[y] = (yearData[y]||0) + 1; 
         });
         let sortedYears = Object.keys(yearData).sort();
@@ -1661,36 +2187,47 @@
         if(cyear) charts['chartYearly'] = new Chart(cyear, { type: 'bar', data: { labels: sortedYears, datasets: [{ label: '異常數量', data: sortedYears.map(k=>yearData[k]), backgroundColor: '#10b981', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
     }
 
-    function addNewRecord() {
+    async function addNewRecord() {
         let reqFields = document.querySelectorAll('.req-field'); let isValid = true;
         reqFields.forEach(el => { if(!el.value.trim()) { el.classList.add('is-invalid'); isValid = false; } else { el.classList.remove('is-invalid'); } });
         if(!isValid) return showToast("驗證錯誤", "請填寫所有必填欄位 (Please fill all required fields).", 3000);
         
-        let snInput = document.getElementById('inSN').value;
-        if(db.some(d => d.sn.toLowerCase() === snInput.toLowerCase() && d.step < 6)) {
+        // 修正：存入資料庫前強制轉大寫
+        let snInput = document.getElementById('inSN').value.trim().toUpperCase();
+        let inVendorVal = document.getElementById('inVendor') ? document.getElementById('inVendor').value.trim().toUpperCase() : '';
+        let inQPNVal = document.getElementById('inQPN') ? document.getElementById('inQPN').value.trim().toUpperCase() : '';
+
+        if(db.some(d => !d.isDeleted && d.sn.toUpperCase() === snInput && !isItemClosed(d))) {
             return showToast("錯誤 (Error)", `此序號 ${snInput} 已經存在且尚未結案！`, 4000);
         }
 
-        // --- 【儲存智慧記憶上下文】 ---
+        showLoading();
+
         let inSite = document.getElementById('inSite'); if(inSite) localStorage.setItem('lazy_site', inSite.value); 
         let inArea = document.getElementById('inArea'); if(inArea) localStorage.setItem('lazy_area', inArea.value); 
         let inIqcDRI = document.getElementById('inIqcDRI'); if(inIqcDRI) localStorage.setItem('lazy_iqcDRI', inIqcDRI.value);
         let inModel = document.getElementById('inModel'); if(inModel) localStorage.setItem('lazy_model', inModel.value);
         let inStage = document.getElementById('inStage'); if(inStage) localStorage.setItem('lazy_stage', inStage.value);
         
-        // 抓取 F 與 T 並組合不良率字串
         let fVal = document.getElementById('inDefectF') ? document.getElementById('inDefectF').value : '';
         let tVal = document.getElementById('inDefectT') ? document.getElementById('inDefectT').value : '';
         let pctStr = document.getElementById('inDefectDisplay') ? document.getElementById('inDefectDisplay').innerText : '-%';
         let defectRateFinal = (fVal !== '' && tVal !== '') ? `${fVal}F/${tVal}T=${pctStr}` : '';
 
-        // --- 【修復：補回圖片狀態判斷變數】 ---
         let inImgLine = document.getElementById('inImgLine'); 
         let inImgIQC = document.getElementById('inImgIQC');
-        let hasImgFlag = (inImgLine && inImgLine.files.length > 0) || (inImgIQC && inImgIQC.files.length > 0) || pastedImages.line || pastedImages.iqc;
+        let fileLine = inImgLine && inImgLine.files.length > 0 ? inImgLine.files[0] : pastedImageFiles.line;
+        let fileIqc = inImgIQC && inImgIQC.files.length > 0 ? inImgIQC.files[0] : pastedImageFiles.iqc;
+        let hasImgFlag = !!(fileLine || fileIqc);
+
+        // --- 【修復 2：離線模式的圖片遺失黑洞警告】 ---
+        if (hasImgFlag && (!isFirebaseReady || !navigator.onLine)) {
+            showToast("警告", "目前離線或未連線至伺服器，圖片無法上傳，請事後透過編輯補傳。", 6000);
+            hasImgFlag = false; // 強制將帶圖標記設為 false，避免產生永遠不見的死檔
+        }
 
         let newItem = {
-            id: Date.now(), 
+            id: generateUUID(), 
             priority: document.getElementById('inPriority') ? document.getElementById('inPriority').checked : false, 
             site: inSite ? inSite.value : '', 
             occurTime: document.getElementById('inTime') ? document.getElementById('inTime').value : '', 
@@ -1698,8 +2235,8 @@
             model: document.getElementById('inModel') ? document.getElementById('inModel').value : '', 
             stage: document.getElementById('inStage') ? document.getElementById('inStage').value : '', 
             iqcDRI: inIqcDRI ? inIqcDRI.value : '', 
-            vendor: document.getElementById('inVendor') ? document.getElementById('inVendor').value : '', 
-            qpn: document.getElementById('inQPN') ? document.getElementById('inQPN').value : '', 
+            vendor: inVendorVal, 
+            qpn: inQPNVal, 
             parts: document.getElementById('inParts') ? document.getElementById('inParts').value : '', 
             sn: snInput, 
             failStation: document.getElementById('inFailStation') ? document.getElementById('inFailStation').value : '', 
@@ -1714,22 +2251,67 @@
             resDim: document.getElementById('resDimension') ? document.getElementById('resDimension').value : '', 
             resFunc: document.getElementById('resFunction') ? document.getElementById('resFunction').value : '', 
             hasImg: hasImgFlag, 
-            rtv: 'No', rtvBatchId: null, rtvType: '', courierComp: '', trackingNo: '', step: 0, cargoSubStep: '', eta: '', ata: '', delayStatus: '', timestamps: [], createdAt: new Date().toISOString().split('T')[0], logs: [], comments: []
+            rtv: 'No', rtvBatchId: null, rtvType: '', courierComp: '', trackingNo: '', step: 0, cargoSubStep: '', eta: '', ata: '', delayStatus: '', timestamps: [], createdAt: getLocalDateString(), logs: [], comments: [], isDeleted: false
         };
-        addLog(newItem, currentUserRole, "建立新紀錄 (Created)"); db.unshift(newItem); 
         
+        // --- 【修復：非同步原子化寫入，解決圖片孤兒檔案問題】 ---
+        // 1. 先秒速將基本單據寫入本地與雲端資料庫
+        addLog(newItem, currentUserRole, "建立新紀錄 (Created)"); 
+        db.unshift(newItem); 
         saveDB(); 
+        
+        syncItemToCloud(newItem).then(async () => {
+            // 2. 單據建立成功後，再於背景上傳圖片，完成後局部更新 URL
+            if (isFirebaseReady && hasImgFlag) {
+                try {
+                    showToast("背景上傳中", "單據已建立，正在背景壓縮並上傳照片...", 2000);
+                    const { getStorage, ref, uploadBytes, getDownloadURL } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js");
+                    const storage = getStorage(firebaseApp); 
+                    let urlUpdates = {};
+                    
+                    if (fileLine) {
+                        const compressedLine = await compressImage(fileLine);
+                        const lineExt = compressedLine.name ? compressedLine.name.split('.').pop() : 'jpg';
+                        const lineRef = ref(storage, `rtv_images/${newItem.id}_line_${Date.now()}.${lineExt}`);
+                        await uploadBytes(lineRef, compressedLine);
+                        urlUpdates.imgLineUrl = await getDownloadURL(lineRef);
+                    }
+                    if (fileIqc) {
+                        const compressedIqc = await compressImage(fileIqc);
+                        const iqcExt = compressedIqc.name ? compressedIqc.name.split('.').pop() : 'jpg';
+                        const iqcRef = ref(storage, `rtv_images/${newItem.id}_iqc_${Date.now()}.${iqcExt}`);
+                        await uploadBytes(iqcRef, compressedIqc);
+                        urlUpdates.imgIQCUrl = await getDownloadURL(iqcRef);
+                    }
+
+                    if(Object.keys(urlUpdates).length > 0) {
+                        Object.assign(newItem, urlUpdates);
+                        await updateItemInCloud(newItem.id, urlUpdates);
+                        saveDB();
+                        // --- 【修復：正確判斷目前是否在 grid 選單下】 ---
+                        if(currentView === 'grid') applyFilters(false);
+                        showToast("上傳完成", "圖片已成功附加至單據！", 3000);
+                    }
+                } catch(e) {
+                    console.error("圖片上傳失敗", e);
+                    showToast("警告", "圖片上傳失敗，但文字資料已成功儲存。", 4000);
+                }
+            }
+        });
+        
         applyFilters(); 
         
         localStorage.removeItem('rtv_draft');
         isFormDirty = false;
         pastedImages = { line: false, iqc: false };
+        pastedImageFiles = { line: null, iqc: null };
         let alertEl = document.getElementById('draft-alert');
         if(alertEl) alertEl.classList.add('d-none');
         document.getElementById('paste-preview-line').innerText = '';
         document.getElementById('paste-preview-iqc').innerText = '';
-        document.getElementById('inDefectDisplay').innerText = '-%'; // reset display
+        document.getElementById('inDefectDisplay').innerText = '-%'; 
         
+        hideLoading();
         showToast("成功 (Success)", "紀錄已儲存 (Saved)."); 
         let formEl = document.getElementById('addRecordForm');
         if(formEl) formEl.reset(); 
@@ -1738,16 +2320,15 @@
 
     function autoFillByQPN(qpn) { 
         if(!qpn) return; 
-        let found = db.find(d => d.qpn.toLowerCase() === qpn.toLowerCase()); 
+        let found = db.find(d => !d.isDeleted && d.qpn.toLowerCase() === qpn.toLowerCase()); 
         if(found) { 
             let v = document.getElementById('inVendor'); if(v) v.value = found.vendor; 
             let p = document.getElementById('inParts'); if(p) p.value = found.parts; 
         } 
     }
 
-    // --- 【Zalo/Teams 一鍵摘要分享】 ---
     window.copyShareSummary = function(id) {
-        let item = db.find(d => d.id === id);
+        let item = db.find(d => String(d.id) === String(id));
         if(!item) return;
         
         let dateStr = item.occurTime ? item.occurTime.split('T')[0] : '';
@@ -1771,12 +2352,11 @@
         el.style.position = 'absolute';
         el.style.left = '-9999px';
         
-        // 將 textarea 附加到當前的 offcanvas 內，避免 Bootstrap 焦點鎖定機制干擾導致複製到全網頁 HTML
         let container = document.getElementById('quickTrackOffcanvas');
         if (!container) container = document.body;
         
         container.appendChild(el);
-        el.select(); // 移除 el.focus()，直接選取文字
+        el.select(); 
         el.setSelectionRange(0, 99999); 
         document.execCommand('copy');
         container.removeChild(el);
@@ -1785,16 +2365,16 @@
     }
 
     function openQuickTrack(id) {
-        let item = db.find(d => d.id === id);
+        let item = db.find(d => String(d.id) === String(id));
         if(!item) return;
 
         let qtInfo = document.getElementById('qt-info');
         if(qtInfo) {
             qtInfo.innerHTML = `
                 <div class="small text-muted mb-1">料號 / 機種 (QPN / Model)</div>
-                <div class="fw-bold text-primary fs-6 mb-2">${item.qpn} <span class="badge bg-light text-dark border ms-1">${item.model}</span></div>
+                <div class="fw-bold text-primary fs-6 mb-2">${escapeHTML(item.qpn)} <span class="badge bg-light text-dark border ms-1">${escapeHTML(item.model)}</span></div>
                 <div class="small text-muted mb-1">序號 (SN)</div>
-                <div class="fw-bold text-dark mb-2">${item.sn} ${item.rtvBatchId ? '<span class="badge bg-info text-dark ms-1">已批次</span>' : ''}</div>
+                <div class="fw-bold text-dark mb-2">${escapeHTML(item.sn)} ${item.rtvBatchId ? '<span class="badge bg-info text-dark ms-1">已批次</span>' : ''}</div>
                 <div class="small text-muted mb-1">物流 (Mode)</div>
                 <div class="fw-bold text-dark">${item.rtvType || '<span class="text-danger">尚未設定</span>'}</div>
             `;
@@ -1802,7 +2382,7 @@
 
         let qtTl = document.getElementById('qt-timeline');
         let actionBox = document.getElementById('qt-action');
-        let shareBtn = `<button class="btn btn-outline-primary w-100 fw-bold shadow-sm py-2 mt-2" onclick="copyShareSummary(${item.id})"><i class="fas fa-copy me-2"></i> 複製摘要 (Copy Summary)</button>`;
+        let shareBtn = `<button class="btn btn-outline-primary w-100 fw-bold shadow-sm py-2 mt-2" onclick="copyShareSummary('${item.id}')"><i class="fas fa-copy me-2"></i> 複製摘要 (Copy Summary)</button>`;
 
         if(!item.rtvType) {
             if(qtTl) qtTl.innerHTML = '<div class="text-center text-muted my-5"><i class="fas fa-exclamation-circle fa-3x mb-3 text-warning"></i><br>請先進入詳細視窗設定物流方式</div>';
@@ -1816,14 +2396,12 @@
                 let statusClass = isDone ? 'done' : (isActive ? 'active' : '');
                 let timeStr = (item.timestamps && item.timestamps[i]) ? item.timestamps[i].replace('T', ' ') : '-';
                 
-                // --- 【加入順豐超連結】 ---
                 let trackLink = `https://www.sf-express.com/chn/zh/waybill/list?trackNumbers=${item.trackingNo}`;
-                let trackInfo = (item.rtvType === 'Courier' && n.includes('快遞單號') && item.trackingNo) ? 
-                    `<div class="mt-1"><a href="${trackLink}" target="_blank" class="badge bg-success" style="text-decoration:none;"><i class="fas fa-shipping-fast"></i> [順豐] ${item.trackingNo}</a></div>` : '';
+                let trackInfo = (isStepTracking(i, item.rtvType) && item.trackingNo) ? 
+                    `<div class="mt-1"><a href="${trackLink}" target="_blank" class="badge bg-success" style="text-decoration:none;"><i class="fas fa-shipping-fast"></i> [${item.courierComp || '順豐'}] ${item.trackingNo}</a></div>` : '';
 
                 let subStepInfo = (item.rtvType === 'Cargo' && i === 0 && item.cargoSubStep) ? `<div class="text-primary mt-1" style="font-size:0.7rem; font-weight:bold;">↳ ${item.cargoSubStep}</div>` : '';
 
-                // --- 【DRI 顯示邏輯】 ---
                 let dri = getDRI(i, item.rtvType);
                 let driHtml = '';
                 if (dri === 'IQC>>SQE') {
@@ -1848,8 +2426,7 @@
 
             if(actionBox) {
                 if (item.step < names.length) {
-                    // 移除了 hide()，讓面板在推進後保持開啟以顯示新狀態
-                    actionBox.innerHTML = `<button class="btn btn-brand w-100 fw-bold shadow-sm py-2" onclick="quickNextStep(${item.id})"><i class="fas fa-forward me-2"></i>一鍵推進 (Quick Next): ${names[item.step]}</button>` + shareBtn;
+                    actionBox.innerHTML = `<button class="btn btn-brand w-100 fw-bold shadow-sm py-2" onclick="quickNextStep('${item.id}')"><i class="fas fa-forward me-2"></i>一鍵推進 (Quick Next): ${names[item.step]}</button>` + shareBtn;
                 } else {
                     actionBox.innerHTML = `<button class="btn btn-success w-100 fw-bold disabled py-2"><i class="fas fa-check-circle me-2"></i>已全部完成 (All Done)</button>` + shareBtn;
                 }
@@ -1863,9 +2440,9 @@
         }
     }
 
-    window.quickNextStep = function(id) {
+    window.quickNextStep = async function(id) {
         if(event) event.stopPropagation();
-        let item = db.find(d => d.id === id);
+        let item = db.find(d => String(d.id) === String(id));
         if(!item) return;
         if (!item.rtvType) return showToast("提示", "請先設定物流方式。");
 
@@ -1874,7 +2451,7 @@
 
         let nextName = names[item.step], trackVal = '';
         
-        if (item.rtvType === 'Courier' && nextName.includes('快遞單號') && !item.trackingNo) {
+        if (isStepTracking(item.step, item.rtvType) && !item.trackingNo) {
              trackVal = prompt(`[防呆檢查] 請輸入快遞單號 (預設為順豐，留空填入 AUTO 自動生成):`);
              if(trackVal === null) return; 
              if(trackVal.trim() === '' || trackVal.toUpperCase() === 'AUTO') {
@@ -1882,9 +2459,10 @@
              }
         }
 
-        let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        let timeStr = now.toISOString().slice(0,16);
+        showLoading();
+        let timeStr = getLocalIsoDateTime(); // 修復：改用在地化時間
         let targets = item.rtvBatchId ? db.filter(d => d.rtvBatchId === item.rtvBatchId) : [item];
+        let promises = [];
         
         targets.forEach(d => {
             if(!d.timestamps) d.timestamps = [];
@@ -1894,22 +2472,24 @@
                 d.courierComp = d.courierComp || '順豐';
             }
             d.step++;
-            if(nextName.includes('已抵達')) {
+            if(isStepArrived(d.step - 1, d.rtvType)) {
                 d.ata = timeStr.split('T')[0];
                 if(d.eta && d.ata > d.eta) d.delayStatus = 'Delayed'; else d.delayStatus = 'On Time';
             }
             addLog(d, currentUserRole, `[閃電推進] 完成: ${nextName}`);
+            promises.push(syncItemToCloud(d)); 
         });
 
+        await Promise.all(promises);
         saveDB(); 
         sendMailSimulation(targets, nextName, item.step - 1); 
-        if(currentView === 'logistics') renderKanban(); else applyFilters(); 
+        if(currentView === 'logistics') renderKanban(); else applyFilters(false); 
         
-        // 安全刷新面板，不再引發 classList null 錯誤
         let offcanvasEl = document.getElementById('quickTrackOffcanvas');
         if (offcanvasEl && offcanvasEl.classList && offcanvasEl.classList.contains('show')) {
             openQuickTrack(id);
         }
+        hideLoading();
     }
 
     function updateETA(item) {
@@ -1938,7 +2518,7 @@
     }
 
     function openRTVModal(id) {
-        currentDetailId = id; let item = db.find(d => d.id === id);
+        currentDetailId = id; let item = db.find(d => String(d.id) === String(id));
         if(!item) return;
 
         setElText('m-qpn', item.qpn); 
@@ -1964,7 +2544,7 @@
         if(prevBtn) prevBtn.style.display = (currentUserRole==='SuperAdmin' && item.step > 0) ? 'inline-block' : 'none';
         
         let actTime = document.getElementById('actionTime');
-        if(actTime) actTime.value = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16); 
+        if(actTime) actTime.value = getLocalIsoDateTime(); // 修復：改用在地化時間
         
         let trkInput = document.getElementById('trackingNoInput');
         if(trkInput) trkInput.value = item.trackingNo || '';
@@ -1973,6 +2553,17 @@
         if(courierSelect) courierSelect.value = item.courierComp || '順豐';
         
         updateETA(item);
+
+        let qrContainer = document.getElementById("qrcode-container");
+        if(qrContainer) {
+            qrContainer.innerHTML = "";
+            let qrText = item.radar ? `Radar://${item.radar}` : `SN:${item.sn}`;
+            new QRCode(qrContainer, {
+                text: qrText,
+                width: 100, height: 100,
+                colorDark : "#4338ca", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H
+            });
+        }
 
         let syncBtn = document.getElementById('btn-api-sync');
         if(syncBtn) {
@@ -1986,7 +2577,10 @@
         let imgContainer = document.getElementById('m-images');
         if(imgContainer) {
             if (item.hasImg) {
-                imgContainer.innerHTML = `<div class="row g-3"><div class="col-md-6"><img src="https://placehold.co/400x250/f8fafc/64748b?text=Defect+Image+1" class="img-fluid rounded border shadow-sm w-100" alt="Defect Img"></div><div class="col-md-6"><img src="https://placehold.co/400x250/f8fafc/64748b?text=Defect+Image+2" class="img-fluid rounded border shadow-sm w-100" alt="Defect Img"></div></div>`;
+                // Phase 4.1: 加入 onclick 觸發 Lightbox
+                let lineImgHtml = item.imgLineUrl ? `<img src="${item.imgLineUrl}" onclick="openLightbox(this.src)" style="cursor:zoom-in;" class="img-fluid rounded border shadow-sm w-100 mb-2">` : `<img src="https://placehold.co/400x250/f8fafc/64748b?text=Line+Defect" class="img-fluid rounded border shadow-sm w-100 mb-2">`;
+                let iqcImgHtml = item.imgIQCUrl ? `<img src="${item.imgIQCUrl}" onclick="openLightbox(this.src)" style="cursor:zoom-in;" class="img-fluid rounded border shadow-sm w-100">` : `<img src="https://placehold.co/400x250/f8fafc/64748b?text=IQC+Defect" class="img-fluid rounded border shadow-sm w-100">`;
+                imgContainer.innerHTML = `<div class="row g-3"><div class="col-md-6">${lineImgHtml}</div><div class="col-md-6">${iqcImgHtml}</div></div>`;
             } else {
                 imgContainer.innerHTML = `<div class="text-muted text-center py-4 bg-light rounded"><i class="fas fa-image text-secondary fs-2 mb-2 opacity-50"></i><br>無附加圖片 (No attached images)</div>`;
             }
@@ -2001,28 +2595,28 @@
         if(modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     }
 
-    // --- Update Cargo Sub Step Logic ---
     window.updateCargoSubStep = function() {
-        let item = db.find(d => d.id === currentDetailId);
+        let item = db.find(d => String(d.id) === String(currentDetailId));
         if(item) {
             let selectEl = document.getElementById('cargoSubStepInput');
             if(selectEl) {
                 item.cargoSubStep = selectEl.value;
                 saveDB();
                 addLog(item, currentUserRole, `[Cargo] 更新 Kick Off 細項: ${item.cargoSubStep}`);
+                syncItemToCloud(item);
                 renderTimelineModal(item);
-                if(currentView === 'logistics') renderKanban(); else applyFilters();
+                if(currentView === 'logistics') renderKanban(); else applyFilters(false);
                 showToast("更新成功", "退運細項進度已更新。", 2000);
             }
         }
     }
 
     function changeRTVMode(mode) { 
-        let t = db.find(d=>d.id===currentDetailId); 
+        let t = db.find(d=>String(d.id)===String(currentDetailId)); 
         if(!t) return;
         if(t.rtvType && currentUserRole!=='SuperAdmin') return showToast('錯誤 (Error)','權限不足 (Permission denied).'); 
 
-        let candidates = db.filter(d => d.vendor === t.vendor && d.id !== t.id && d.rtv === 'Yes' && !d.rtvBatchId && (!d.rtvType || d.rtvType === '') );
+        let candidates = db.filter(d => !d.isDeleted && d.vendor === t.vendor && String(d.id) !== String(t.id) && d.rtv === 'Yes' && !d.rtvBatchId && (!d.rtvType || d.rtvType === '') );
         
         if (candidates.length > 0) {
             pendingMode = mode;
@@ -2035,40 +2629,52 @@
         }
     }
 
-    function proceedModeChange(mode) {
+    async function proceedModeChange(mode) {
+        showLoading();
         if (!mode) mode = pendingMode; 
-        let t = db.find(d=>d.id===currentDetailId);
+        let t = db.find(d=>String(d.id)===String(currentDetailId));
         let grp = t.rtvBatchId?db.filter(x=>x.rtvBatchId===t.rtvBatchId):[t]; 
-        grp.forEach(x=>x.rtvType=mode); 
+        let promises = grp.map(x => { 
+            x.rtvType = mode; 
+            return syncItemToCloud(x); 
+        }); 
+        await Promise.all(promises);
         saveDB();
-        openRTVModal(t.id); applyFilters(); 
+        hideLoading();
+        openRTVModal(t.id); applyFilters(false); 
     }
 
-    function executeSmartConsolidation() {
-        let t = db.find(d=>d.id===currentDetailId);
-        let candidates = db.filter(d => d.vendor === t.vendor && d.id !== t.id && d.rtv === 'Yes' && !d.rtvBatchId && (!d.rtvType || d.rtvType === '') );
+    async function executeSmartConsolidation() {
+        let t = db.find(d=>String(d.id)===String(currentDetailId));
+        let candidates = db.filter(d => !d.isDeleted && d.vendor === t.vendor && String(d.id) !== String(t.id) && d.rtv === 'Yes' && !d.rtvBatchId && (!d.rtvType || d.rtvType === '') );
         
-        let batchName = `BATCH-AI-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Date.now().toString().slice(-4)}`;
+        // 修復：改用在地化時間
+        let batchName = `BATCH-AI-${getLocalDateString().replace(/-/g,'')}-${Date.now().toString().slice(-4)}`;
         
+        showLoading();
         let allItems = [t, ...candidates];
-        allItems.forEach(item => {
+        let promises = allItems.map(item => {
             item.rtvBatchId = batchName;
             item.rtvType = pendingMode;
             item.step = 0;
             item.timestamps = [];
+            item.isOrphaned = false; // --- 【修復 1：重新組隊後，強制洗掉脫隊標籤】 ---
             addLog(item, currentUserRole, `[Smart AI] 自動合併至 ${batchName}`);
+            return syncItemToCloud(item); 
         });
 
+        await Promise.all(promises);
         saveDB();
+        hideLoading();
         bootstrap.Modal.getInstance(document.getElementById('smartConsolidateModal')).hide();
         showToast("AI 合併成功", `已將 ${allItems.length} 筆資料合併為 ${batchName}`);
         openRTVModal(t.id);
-        applyFilters();
+        applyFilters(false);
     }
 
     function simulateAPISync() {
         let btn = document.getElementById('btn-api-sync');
-        let item = db.find(d => d.id === currentDetailId);
+        let item = db.find(d => String(d.id) === String(currentDetailId));
         if(!btn || !item) return;
         
         let orgHtml = btn.innerHTML;
@@ -2079,13 +2685,10 @@
             btn.innerHTML = orgHtml;
             btn.disabled = false;
             
-            // --- 【API 智能自動穿越推進】 ---
-            if (item.rtvType === 'Courier' && item.step < 4) { // 如果還沒到 Arrived
+            if (item.rtvType === 'Courier' && item.step < 4) { 
                 let trackVal = document.getElementById('trackingNoInput').value || item.trackingNo || 'AUTO-' + Date.now().toString().slice(-6);
-                let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-                let timeStr = now.toISOString().slice(0,16);
+                let timeStr = getLocalIsoDateTime(); // 修復：改用在地化時間
                 
-                // 直接推到 Arrived (index 4)
                 for(let i=item.step; i<=4; i++) {
                     if(!item.timestamps) item.timestamps = [];
                     item.timestamps[i] = timeStr;
@@ -2095,16 +2698,17 @@
                 item.ata = timeStr.split('T')[0];
                 if(item.eta && item.ata > item.eta) item.delayStatus = 'Delayed'; else item.delayStatus = 'On Time';
                 
-                item.step = 5; // 推進到 FA Proc.
+                item.step = 5; 
                 saveDB();
                 addLog(item, 'SF Express API', `[物流簽收] API 自動推進至: 已抵達 (Arrived)`);
-                
+                syncItemToCloud(item); 
+
                 openRTVModal(item.id);
-                if(currentView === 'logistics') renderKanban(); else applyFilters();
+                if(currentView === 'logistics') renderKanban(); else applyFilters(false);
                 showToast("API 同步成功", "順豐顯示已簽收，系統已為您自動跳轉至【已抵達】！", 4000);
             } else {
                 let actTime = document.getElementById('actionTime');
-                if(actTime) actTime.value = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16);
+                if(actTime) actTime.value = getLocalIsoDateTime(); // 修復：改用在地化時間
                 nextStepModal(true); 
                 showToast("API 同步成功", "成功從物流商獲取最新狀態.", 3000);
             }
@@ -2112,7 +2716,7 @@
     }
 
     function openPublicTracking() {
-        let t = db.find(d=>d.id===currentDetailId);
+        let t = db.find(d=>String(d.id)===String(currentDetailId));
         if(!t || !t.rtvType) return showToast("錯誤", "尚未設定物流，無法生成連結。");
 
         let win = window.open('', '_blank');
@@ -2142,12 +2746,14 @@
     }
 
     function printShippingLabel() {
-        let item = db.find(d => d.id === currentDetailId);
+        let item = db.find(d => String(d.id) === String(currentDetailId));
         if(!item) return;
         if(!item.rtvType) return showToast("錯誤", "請先設定物流方式。");
 
+        let qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=Radar://${item.radar || item.sn}`;
+
         let printHtml = `
-            <div style="width: 100%; max-width: 600px; margin: 0 auto; border: 2px solid #000; padding: 20px; font-family: Arial, sans-serif;">
+            <div style="width: 100%; max-width: 600px; margin: 0 auto; border: 2px solid #000; padding: 20px; font-family: Arial, sans-serif; position: relative;">
                 <div style="border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
                     <h2 style="margin: 0; font-weight: 900; letter-spacing: 2px;">RTV EXPRESS</h2>
                     <h1 style="margin: 0; font-size: 3rem;">${item.rtvType === 'Courier' ? 'EXP' : 'STD'}</h1>
@@ -2162,6 +2768,9 @@
                         <strong>${item.vendor} Corp.</strong><br>
                         Attn: ${item.rev} (FAE)<br>Returns Dept.
                     </div>
+                </div>
+                <div style="position: absolute; right: 20px; top: 110px;">
+                    <img src="${qrDataUrl}" width="80" height="80" alt="QR">
                 </div>
                 <div style="border: 2px dashed #000; padding: 10px; text-align: center; margin-bottom: 20px;">
                     <div style="font-size: 1.5rem; font-weight: bold; letter-spacing: 5px;">[${item.courierComp || '順豐'}] ${item.trackingNo || 'AWB PENDING'}</div>
@@ -2187,7 +2796,7 @@
     }
 
     window.simulateMobileScan = function(id) {
-        let t = db.find(d => d.id === id);
+        let t = db.find(d => String(d.id) === String(id));
         if(!t) return;
         
         let names = t.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
@@ -2209,7 +2818,6 @@
 
             let extraHtml = '';
             if (t.rtvType === 'Courier' && name.includes('快遞單號') && t.trackingNo) {
-                // --- 【手機端也加入順豐超連結】 ---
                 let trackLink = `https://www.sf-express.com/chn/zh/waybill/list?trackNumbers=${t.trackingNo}`;
                 extraHtml = `<div style="margin-top:6px;"><a href="${trackLink}" target="_blank" style="background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:12px; font-family:monospace; text-decoration:none;">🎫 [${t.courierComp || '順豐'}] ${t.trackingNo}</a></div>`;
             }
@@ -2289,14 +2897,15 @@
                 </div>
                 <div class="section-title">物流時間軸 (Logistics Timeline)</div>
                 <div class="timeline-box"><div class="timeline-line-bg"></div>${timelineHtml}</div>
-                <div class="bottom-bar"><button class="btn-main" onclick="window.opener.mobileUpdate(${t.id});" ${nextBtnDisabled}> ▶▶ ${nextBtnText}</button></div>
+                <div class="bottom-bar"><button class="btn-main" onclick="window.opener.mobileUpdate('${t.id}');" ${nextBtnDisabled}> ▶▶ ${nextBtnText}</button></div>
             </body>
             </html>
         `);
     }
 
-    window.mobileUpdate = function(id) {
-        let item = db.find(d => d.id === id);
+    // --- 【修復：補齊遺失的結構並保護變數 (Phase 1.2)】 ---
+    window.mobileUpdate = async function(id) {
+        let item = db.find(d => String(d.id) === String(id));
         if(!item) return;
 
         let names = item.rtvType === 'Cargo' ? stepsCargo : stepsCourier;
@@ -2312,9 +2921,10 @@
              }
         }
 
-        let now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        let timeStr = now.toISOString().slice(0,16);
+        showLoading();
+        let timeStr = getLocalIsoDateTime(); // 修復：改用在地化時間
         let targets = item.rtvBatchId ? db.filter(d => d.rtvBatchId === item.rtvBatchId) : [item];
+        let promises = [];
 
         targets.forEach(d => {
             if(!d.timestamps) d.timestamps = [];
@@ -2328,16 +2938,20 @@
                 d.ata = timeStr.split('T')[0];
                 if(d.eta && d.ata > d.eta) d.delayStatus = 'Delayed'; else d.delayStatus = 'On Time';
             }
-            addLog(d, 'Mobile User', `[WeChat推進] 完成: ${nextName}`);
+            addLog(d, 'Mobile User', `[行動端推進] 完成: ${nextName}`);
+            promises.push(syncItemToCloud(d)); 
         });
 
+        await Promise.all(promises);
         saveDB();
-        applyFilters(); 
+        applyFilters(false); 
         if(currentView === 'logistics') renderKanban();
 
         if(window.mobileWin && !window.mobileWin.closed) {
             window.simulateMobileScan(id); 
         }
+        hideLoading();
+        sendMailSimulation(targets, nextName, item.step - 1);
     }
 
     function renderTimelineModal(item) {
@@ -2368,12 +2982,10 @@
             let isDone = i < item.step; let isCurr = i === item.step; 
             let timeHtml = (item.timestamps && item.timestamps[i]) ? `<div class="t-time-box">${item.timestamps[i].replace('T',' ')}</div>` : ''; 
             
-            // --- 【加入順豐超連結】 ---
             let trackLink = `https://www.sf-express.com/chn/zh/waybill/list?trackNumbers=${item.trackingNo}`;
-            let trackHtml = (item.rtvType === 'Courier' && n.includes('快遞單號') && item.trackingNo) ? 
-                `<div class="mt-2"><a href="${trackLink}" target="_blank" class="badge bg-success px-2 py-1 shadow-sm" style="text-decoration:none;"><i class="fas fa-shipping-fast"></i> [順豐] ${item.trackingNo}</a></div>` : '';
+            let trackHtml = (isStepTracking(i, item.rtvType) && item.trackingNo) ? 
+                `<div class="mt-2"><a href="${trackLink}" target="_blank" class="badge bg-success px-2 py-1 shadow-sm" style="text-decoration:none;"><i class="fas fa-shipping-fast"></i> [${item.courierComp || '順豐'}] ${item.trackingNo}</a></div>` : '';
                 
-            // --- 【DRI 顯示邏輯：支援 IQC>>SQE icon 並放至下方】 ---
             let dri = getDRI(i, item.rtvType);
             let driHtml = '';
             if (dri === 'IQC>>SQE') {
@@ -2397,8 +3009,8 @@
         if(trkArea) trkArea.style.display = (item.rtvType==='Courier' && names[item.step].includes('快遞單號')) ? 'block' : 'none';
     }
 
-    function nextStepModal(isApiSync = false) {
-        let item = db.find(d => d.id === currentDetailId); 
+    async function nextStepModal(isApiSync = false) {
+        let item = db.find(d => String(d.id) === String(currentDetailId)); 
         if(!item) return;
         
         let actTime = document.getElementById('actionTime');
@@ -2413,13 +3025,15 @@
         let courierComp = courierSelect ? courierSelect.value : '順豐';
         
         let currentStepName = item.rtvType==='Cargo'?stepsCargo[item.step]:stepsCourier[item.step];
-        if(item.rtvType==='Courier' && currentStepName.includes('快遞單號') && !track && !item.trackingNo) {
+        if(isStepTracking(item.step, item.rtvType) && !track && !item.trackingNo) {
             return showToast("⛔ 防呆攔截", "必須填寫快遞單號 (AWB) 才能進行下一步！", 5000);
         }
 
+        showLoading();
         let list = item.rtvType==='Cargo'?stepsCargo:stepsCourier; 
         let targets = item.rtvBatchId ? db.filter(d=>d.rtvBatchId===item.rtvBatchId) : [item];
         let logMsgPrefix = isApiSync ? "[API 同步] 完成進度" : "完成進度";
+        let promises = [];
 
         targets.forEach(d => { 
             d.timestamps[d.step] = time; 
@@ -2428,18 +3042,21 @@
                 d.courierComp = courierComp;
             }
             d.step++; 
-            if(list[d.step-1].includes('已抵達')) {
+            if(isStepArrived(d.step - 1, d.rtvType)) {
                 d.ata = time.split('T')[0];
                 if(d.eta && d.ata > d.eta) d.delayStatus = 'Delayed'; else d.delayStatus = 'On Time';
             }
             addLog(d, currentUserRole, `${logMsgPrefix}: ${list[d.step-1]}`); 
+            promises.push(syncItemToCloud(d)); 
         });
         
+        await Promise.all(promises);
         saveDB(); 
         if(!isApiSync) sendMailSimulation(targets, list[item.step-1], item.step - 1); 
         
         openRTVModal(item.id); 
-        if(currentView === 'logistics') renderKanban(); else applyFilters();
+        if(currentView === 'logistics') renderKanban(); else applyFilters(false);
+        hideLoading();
     }
 
     function sendMailSimulation(items, stepName, completedStepIndex) {
@@ -2490,35 +3107,50 @@
         let cbs = document.querySelectorAll('.row-cb:checked'); if(cbs.length < 1) return showToast("提示 (Info)", "請勾選資料 (Select items).");
         let list = document.getElementById('mergeList'); if(list) list.innerHTML = ''; 
         let vendors = new Set();
+        let baseStep = null; 
         
-        cbs.forEach(cb => { 
-            let item = db.find(d => d.id == cb.value); 
+        for(let cb of cbs) {
+            let item = db.find(d => String(d.id) === String(cb.value)); 
             if(item) {
+                if(baseStep === null) baseStep = item.step;
+                else if (baseStep !== item.step) {
+                    return showToast("錯誤 (Error)", "只能合併【物流進度相同】的單據！");
+                }
+                
                 vendors.add(item.vendor); 
-                if(list) list.innerHTML += `<li class="list-group-item bg-transparent text-muted"><i class="fas fa-microchip me-2"></i>${item.sn} <span class="float-end">T0: ${item.t0Result}</span></li>`; 
+                if(list) list.innerHTML += `<li class="list-group-item bg-transparent text-muted"><i class="fas fa-microchip me-2"></i>${escapeHTML(item.sn)} <span class="float-end">T0: ${item.t0Result}</span></li>`; 
             }
-        });
+        }
         
         if(vendors.size > 1) return showToast("錯誤 (Error)", "只能合併相同廠商的資料 (Must merge same vendor)."); 
         
         setElText('mergeCount', cbs.length); 
         let mbn = document.getElementById('mergeBatchName');
-        if(mbn) mbn.value = `BATCH-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Date.now().toString().slice(-4)}`;
+        // 修復：改用在地化時間
+        if(mbn) mbn.value = `BATCH-${getLocalDateString().replace(/-/g,'')}-${Date.now().toString().slice(-4)}`;
         
         let mEl = document.getElementById('mergeModal');
         if(mEl) bootstrap.Modal.getOrCreateInstance(mEl).show();
     }
 
-    function confirmMerge() { 
+    async function confirmMerge() { 
         let mbn = document.getElementById('mergeBatchName');
         let batchName = mbn ? mbn.value : ''; 
+        showLoading();
+        let promises = [];
         document.querySelectorAll('.row-cb:checked').forEach(cb => { 
-            let item = db.find(d=>d.id==cb.value); 
+            let item = db.find(d=>String(d.id)===String(cb.value)); 
             if(item) {
-                item.rtv = 'Yes'; item.rtvBatchId = batchName; item.rtvType = ''; item.step = 0; item.timestamps = []; item.eta = ''; item.ata = ''; addLog(item, currentUserRole, `合併 (Merged): ${batchName}`); 
+                item.rtv = 'Yes'; 
+                item.rtvBatchId = batchName; 
+                item.isOrphaned = false; // --- 【修復 1：手動建立批次後，強制洗掉脫隊標籤】 ---
+                addLog(item, currentUserRole, `合併 (Merged): ${batchName}`); 
+                promises.push(syncItemToCloud(item));
             }
         }); 
+        await Promise.all(promises);
         saveDB();
+        hideLoading();
         let mEl = document.getElementById('mergeModal');
         if(mEl) bootstrap.Modal.getOrCreateInstance(mEl).hide(); 
         applyFilters(); 
@@ -2526,72 +3158,114 @@
     }
     
     function updateRTVStatus(id, val) { 
-        let item = db.find(d => d.id === id); 
+        let item = db.find(d => String(d.id) === String(id)); 
         if(item) { 
             item.rtv = val; 
             if(val !== 'Yes') { item.rtvType = ''; item.trackingNo = ''; item.timestamps = []; item.step = 0; item.eta = ''; item.ata = ''; item.cargoSubStep = ''; } 
             saveDB();
-            applyFilters(); 
+            syncItemToCloud(item);
+            applyFilters(false); 
         } 
     }
     
     function openSettingsModal() { let m = document.getElementById('settingsModal'); if(m) bootstrap.Modal.getOrCreateInstance(m).show(); }
+    
     function saveEmailConfig() { 
+        let elEta = document.getElementById('cfg-eta'); if(elEta) sysConfig.etaDays = parseInt(elEta.value) || 7;
+        let elMail = document.getElementById('cfg-mailgroup'); if(elMail) sysConfig.mailGroup = elMail.value;
+        let elDark = document.getElementById('cfg-darkmode'); if(elDark) sysConfig.darkMode = elDark.checked;
+        localStorage.setItem('rtv_config', JSON.stringify(sysConfig));
+        
+        toggleDarkMode(sysConfig.darkMode);
+        
         let m = document.getElementById('settingsModal'); 
         if(m) bootstrap.Modal.getOrCreateInstance(m).hide(); 
         showToast("系統 (System)", "設定已儲存 (Config updated)."); 
-        if(currentView === 'logistics') renderKanban(); else applyFilters();
+        if(currentView === 'logistics') renderKanban(); else applyFilters(false);
     }
     
     function prevStep() { 
         if(confirm("確定回退？ (Revert step?)")){ 
-            let t = db.find(d=>d.id===currentDetailId); if(!t) return; 
+            let t = db.find(d=>String(d.id)===String(currentDetailId)); if(!t) return; 
             let grp = t.rtvBatchId?db.filter(x=>x.rtvBatchId===t.rtvBatchId):[t]; 
-            grp.forEach(x=>{ 
+            showLoading();
+            let promises = grp.map(x=>{ 
                 x.step--; 
                 x.timestamps[x.step]=null; 
                 if (x.step < (x.rtvType==='Cargo'?3:4)) { x.ata = ''; x.delayStatus = ''; }
+                return syncItemToCloud(x);
             }); 
-            saveDB();
-            openRTVModal(t.id); 
-            if(currentView === 'logistics') renderKanban(); else applyFilters(); 
+            Promise.all(promises).then(() => {
+                saveDB();
+                openRTVModal(t.id); 
+                if(currentView === 'logistics') renderKanban(); else applyFilters(false); 
+                hideLoading();
+            });
         } 
     }
     
     function deleteSelected() { 
-        let ids=[...document.querySelectorAll('.row-cb:checked')].map(c=>parseInt(c.value)); 
-        if(ids.length && confirm("確定刪除？ (Delete?)")) { 
-            db=db.filter(d=>!ids.includes(d.id)); 
-            saveDB();
-            applyFilters(); 
+        let ids=[...document.querySelectorAll('.row-cb:checked')].map(c=>c.value); 
+        if(ids.length && confirm("確定刪除？ (將移至資源回收桶，並清除附帶的實體圖檔)")) { 
+            showLoading();
+            let promises = ids.map(async id => {
+                let item = db.find(d => String(d.id) === String(id));
+                if (item) {
+                    item.isDeleted = true; // Phase 4.5: 軟刪除 (Soft Delete)
+                    
+                    // --- 【修復 3：清除 Storage 實體檔案，終結成本洩漏 (Storage Leak)】 ---
+                    if (isFirebaseReady && item.hasImg) {
+                        try {
+                            const { getStorage, ref, deleteObject } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js");
+                            const storage = getStorage(firebaseApp);
+                            if (item.imgLineUrl) await deleteObject(ref(storage, item.imgLineUrl)).catch(()=>console.warn("Line img delete failed"));
+                            if (item.imgIQCUrl) await deleteObject(ref(storage, item.imgIQCUrl)).catch(()=>console.warn("IQC img delete failed"));
+                            item.imgLineUrl = '';
+                            item.imgIQCUrl = '';
+                            item.hasImg = false;
+                        } catch(e) { console.warn("Storage API error:", e); }
+                    }
+
+                    return syncItemToCloud(item);
+                }
+            });
+            Promise.all(promises).then(() => {
+                saveDB();
+                applyFilters(); 
+                hideLoading();
+            });
         } 
     }
     
-    function toggleAll() { let c = document.getElementById('checkAll'); if(!c) return; let isC = c.checked; document.querySelectorAll('.row-cb').forEach(cb=>cb.checked=isC); }
+    function toggleAll() { let c = document.getElementById('checkAll'); if(!c) return; let isC = c.checked; document.querySelectorAll('.row-cb').forEach(cb=>cb.checked=isC); handleRowCheck(); }
     function addLog(d, who, what) { d.logs.unshift({who, when:new Date().toLocaleString('zh-TW',{hour12:false}), what}); }
-    function renderLogs(l) { let lc = document.getElementById('log-container'); if(lc) lc.innerHTML = l.map(x=>`<div class="log-item"><div class="log-time" style="font-size:0.7rem;">${x.when} <span class="badge bg-secondary ms-1">${x.who}</span></div><div class="text-dark small mt-1">${x.what}</div></div>`).join(''); }
+    function renderLogs(l) { let lc = document.getElementById('log-container'); if(lc) lc.innerHTML = l.map(x=>`<div class="log-item"><div class="log-time" style="font-size:0.7rem;">${x.when} <span class="badge bg-secondary ms-1">${x.who}</span></div><div class="text-dark small mt-1">${escapeHTML(x.what)}</div></div>`).join(''); }
     function addComment() { 
         let nc = document.getElementById('newComment'); if(!nc) return; let txt = nc.value; if(!txt) return; 
-        let d = db.find(x=>x.id===currentDetailId); 
+        let d = db.find(x=>String(x.id)===String(currentDetailId)); 
         if(d) { 
             d.comments.unshift({who:currentUserRole, msg:txt, time:new Date().toLocaleString()}); 
             saveDB();
+            syncItemToCloud(d);
             nc.value=''; renderComments(d.comments); 
         } 
     }
-    function renderComments(c) { let cc = document.getElementById('comment-container'); if(cc) cc.innerHTML = c.map(x=>`<div class="comment-item shadow-sm"><div class="d-flex justify-content-between small text-muted mb-1"><span class="fw-bold text-primary">${x.who}</span><span style="font-size:0.7rem;">${x.time}</span></div><div class="small">${x.msg}</div></div>`).join(''); }
+    function renderComments(c) { let cc = document.getElementById('comment-container'); if(cc) cc.innerHTML = c.map(x=>`<div class="comment-item shadow-sm"><div class="d-flex justify-content-between small text-muted mb-1"><span class="fw-bold text-primary">${x.who}</span><span style="font-size:0.7rem;">${x.time}</span></div><div class="small">${escapeHTML(x.msg)}</div></div>`).join(''); }
+    
     function removeFromBatch(id) { 
-        if(!confirm("自批次移除？ (Remove from batch?)")) return; 
-        let item = db.find(d=>d.id===id); 
+        if(!confirm("自批次移除？ (將保留當前進度獨立追蹤)")) return; 
+        let item = db.find(d=>String(d.id)===String(id)); 
         if(item) { 
-            item.rtv = 'Pending'; item.rtvBatchId = null; item.rtvType = ''; item.step = 0; item.eta = ''; item.ata = ''; 
+            item.rtvBatchId = null; // Phase 2.3: 僅移除批次標籤，保留進階狀態
+            item.isOrphaned = true; // --- 【修復 5：標記為脫隊單據】 ---
             saveDB();
-            applyFilters(); 
+            syncItemToCloud(item);
+            applyFilters(false); 
         } 
     }
     
     function openEditModal(id) { 
-        let d = db.find(x=>x.id===id); 
+        let d = db.find(x=>String(x.id)===String(id)); 
         if(!d) return;
         document.getElementById('edit-id').value = id; 
         
@@ -2612,7 +3286,6 @@
         document.getElementById('edit-descLine').value = d.descLine || '';
         document.getElementById('edit-descIQC').value = d.descIQC || '';
 
-        // 解析不良率字串回填
         let rateStr = d.defectRate || '';
         let match = rateStr.match(/(\d+)F\/(\d+)T/);
         if(match) {
@@ -2632,60 +3305,145 @@
         document.getElementById('edit-resDim').value = d.resDim || '';
         document.getElementById('edit-resFunc').value = d.resFunc || '';
 
+        // --- 清空上次開啟 Modal 時殘留的檔案選擇 ---
+        let elLine = document.getElementById('edit-imgLine'); if (elLine) elLine.value = ''; 
+        let elIqc = document.getElementById('edit-imgIQC'); if (elIqc) elIqc.value = '';
+
         document.getElementById('edit-priority').checked = d.priority || false; 
         
         let em = document.getElementById('editModal'); 
         if(em) bootstrap.Modal.getOrCreateInstance(em).show(); 
     }
     
-    function saveEdit() { 
+    async function saveEdit() { 
         let eid = document.getElementById('edit-id'); if(!eid) return;
-        let id = parseInt(eid.value); 
-        let d = db.find(x=>x.id===id); 
+        let id = eid.value; 
+        let d = db.find(x=>String(x.id)===String(id)); 
         if(!d) return;
 
-        d.site = document.getElementById('edit-site').value;
-        d.area = document.getElementById('edit-area').value;
-        d.occurTime = document.getElementById('edit-time').value;
-        d.model = document.getElementById('edit-model').value;
-        d.stage = document.getElementById('edit-stage').value;
-        d.iqcDRI = document.getElementById('edit-iqcDRI').value;
+        // --- 【修復：編輯模式的樂觀鎖防護 (Optimistic Locking)】 ---
+        // 避免管理員打開 Modal 花了 5 分鐘，存檔時蓋掉產線剛剛推進的進度
+        showLoading();
+        if (isFirebaseReady) {
+            try {
+                const { getDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const docRef = doc(firestoreDb, 'RTV_System_Data', String(id));
+                const latestSnap = await getDoc(docRef);
+                if (latestSnap.exists()) {
+                    const latestData = latestSnap.data();
+                    if (latestData.step !== d.step || latestData.logs.length !== d.logs.length) {
+                        hideLoading();
+                        if(!confirm("⚠️ 衝突警告 (Conflict)：\n此單據在您編輯期間，已被其他人推進進度或加入新留言！\n強制儲存可能會覆蓋他們的修改。是否仍要強制儲存？")) {
+                            return;
+                        }
+                        showLoading();
+                    }
+                }
+            } catch(e) { console.warn("樂觀鎖檢查失敗", e); }
+        }
 
-        d.vendor = document.getElementById('edit-vendor').value;
-        d.qpn = document.getElementById('edit-qpn').value;
-        d.parts = document.getElementById('edit-parts').value;
-        d.sn = document.getElementById('edit-sn').value;
-        d.failStation = document.getElementById('edit-failStation').value;
-        d.radar = document.getElementById('edit-radar').value;
+        // 存入資料庫前強制轉大寫
+        let newSn = document.getElementById('edit-sn').value.trim().toUpperCase();
+        let editVendorVal = document.getElementById('edit-vendor').value.trim().toUpperCase();
+        let editQPNVal = document.getElementById('edit-qpn').value.trim().toUpperCase();
 
-        d.descLine = document.getElementById('edit-descLine').value;
-        d.descIQC = document.getElementById('edit-descIQC').value;
+        let isDuplicate = db.some(x => !x.isDeleted && String(x.id) !== String(id) && x.sn.toUpperCase() === newSn && !isItemClosed(x));
+        if(isDuplicate) {
+            return showToast("資料庫衝突", `此序號 [${newSn}] 已存在於其他尚未結案的單據中！`, 5000);
+        }
 
-        // 重組不良率字串
         let fEdit = document.getElementById('editDefectF').value;
         let tEdit = document.getElementById('editDefectT').value;
         let pctEdit = document.getElementById('editDefectDisplay').innerText;
-        d.defectRate = (fEdit !== '' && tEdit !== '') ? `${fEdit}F/${tEdit}T=${pctEdit}` : '';
+        let defectRateVal = (fEdit !== '' && tEdit !== '') ? `${fEdit}F/${tEdit}T=${pctEdit}` : '';
 
-        d.t0Result = document.getElementById('edit-t0Result').value;
-        d.t1Result = document.getElementById('edit-t1Result').value;
-        d.rev = document.getElementById('edit-rev').value;
+        // --- 【修復 1：真正解決競爭危害 (Race Condition)】 ---
+        // 建立一個專屬的 Update 物件，只包含這次修改的欄位！絕不包含 step 和 timestamps
+        let updateData = {
+            site: document.getElementById('edit-site').value,
+            area: document.getElementById('edit-area').value,
+            occurTime: document.getElementById('edit-time').value,
+            model: document.getElementById('edit-model').value,
+            stage: document.getElementById('edit-stage').value,
+            iqcDRI: document.getElementById('edit-iqcDRI').value,
+            vendor: editVendorVal,
+            qpn: editQPNVal,
+            parts: document.getElementById('edit-parts').value,
+            sn: newSn,
+            failStation: document.getElementById('edit-failStation').value,
+            radar: document.getElementById('edit-radar').value,
+            descLine: document.getElementById('edit-descLine').value,
+            descIQC: document.getElementById('edit-descIQC').value,
+            defectRate: defectRateVal,
+            t0Result: document.getElementById('edit-t0Result').value,
+            t1Result: document.getElementById('edit-t1Result').value,
+            rev: document.getElementById('edit-rev').value,
+            resApp: document.getElementById('edit-resApp').value,
+            resDim: document.getElementById('edit-resDim').value,
+            resFunc: document.getElementById('edit-resFunc').value,
+            priority: document.getElementById('edit-priority').checked
+        };
 
-        d.resApp = document.getElementById('edit-resApp').value;
-        d.resDim = document.getElementById('edit-resDim').value;
-        d.resFunc = document.getElementById('edit-resFunc').value;
+        // --- 【修復 3：實作編輯模式的圖片補傳 (Image Recovery)】 ---
+        let editImgLine = document.getElementById('edit-imgLine');
+        let editImgIQC = document.getElementById('edit-imgIQC');
+        let fileLine = editImgLine && editImgLine.files.length > 0 ? editImgLine.files[0] : null;
+        let fileIqc = editImgIQC && editImgIQC.files.length > 0 ? editImgIQC.files[0] : null;
+        let hasNewImg = !!(fileLine || fileIqc);
 
-        d.priority = document.getElementById('edit-priority').checked; 
+        if (hasNewImg && (!isFirebaseReady || !navigator.onLine)) {
+            showToast("警告", "目前處於離線狀態，圖片無法上傳，請等連線恢復後再補傳。", 5000);
+        } else if (hasNewImg) {
+            try {
+                showToast("背景上傳中", "正在壓縮並上傳補傳之照片...", 2000);
+                // 引入 deleteObject 用以清除舊圖片
+                const { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js");
+                const storage = getStorage(firebaseApp); 
+                
+                if (fileLine) {
+                    // --- 【修復：在上傳新圖片前，先清除舊的產線圖片，防止空間洩漏】 ---
+                    if (d.imgLineUrl) {
+                        await deleteObject(ref(storage, d.imgLineUrl)).catch(() => console.warn("舊產線圖片刪除略過"));
+                    }
+                    const compressedLine = await compressImage(fileLine);
+                    const lineExt = compressedLine.name ? compressedLine.name.split('.').pop() : 'jpg';
+                    const lineRef = ref(storage, `rtv_images/${id}_line_${Date.now()}.${lineExt}`);
+                    await uploadBytes(lineRef, compressedLine);
+                    updateData.imgLineUrl = await getDownloadURL(lineRef);
+                    updateData.hasImg = true;
+                }
+                if (fileIqc) {
+                    // --- 【修復：在上傳新圖片前，先清除舊的 IQC 圖片，防止空間洩漏】 ---
+                    if (d.imgIQCUrl) {
+                        await deleteObject(ref(storage, d.imgIQCUrl)).catch(() => console.warn("舊 IQC 圖片刪除略過"));
+                    }
+                    const compressedIqc = await compressImage(fileIqc);
+                    const iqcExt = compressedIqc.name ? compressedIqc.name.split('.').pop() : 'jpg';
+                    const iqcRef = ref(storage, `rtv_images/${id}_iqc_${Date.now()}.${iqcExt}`);
+                    await uploadBytes(iqcRef, compressedIqc);
+                    updateData.imgIQCUrl = await getDownloadURL(iqcRef);
+                    updateData.hasImg = true;
+                }
+            } catch (e) {
+                console.error("圖片補傳失敗", e);
+                showToast("錯誤", "圖片上傳失敗，將僅更新文字資料。", 3000);
+            }
+        }
+
+        // 1. 同步更新本地端物件 (讓 UI 即時反映)
+        Object.assign(d, updateData);
         
-        saveDB();
+        // 2. 呼叫專屬的 updateItemInCloud，僅上傳變更的欄位
+        await updateItemInCloud(id, updateData); 
         
         let em = document.getElementById('editModal'); 
         if(em) bootstrap.Modal.getOrCreateInstance(em).hide(); 
         
-        applyFilters(); 
+        applyFilters(false); 
         if(currentView === 'logistics') renderKanban();
-        addLog(d, currentUserRole, "Super Admin 強制修改資料 (Force Edited)."); 
-        showToast("更新成功", "資料已由管理員覆寫。");
+        addLog(d, currentUserRole, "Super Admin 修改資料 (Edited)."); 
+        hideLoading();
+        showToast("更新成功", "資料已成功局部更新，不會影響物流進度。");
     }
 </script>
 </body>
